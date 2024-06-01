@@ -4,7 +4,7 @@ use embedded_hal::{
     digital::{InputPin, OutputPin},
 };
 
-use crate::{color, command, flag};
+use crate::{color, command, flag, lut::LUT_PARTIAL_UPDATE};
 
 const RESET_DELAY_MS: u32 = 10;
 
@@ -42,6 +42,7 @@ where
     pub fn init(&mut self) -> Result<(), DisplayError> {
         self.reset();
         self.command(command::SW_RESET)?;
+        self.delay.delay_ms(10);
         self.wait_until_idle();
 
         self.command_with_data(
@@ -52,6 +53,8 @@ where
                 0x00,
             ],
         )?;
+
+        // self.command_with_data(command::SET_SOFTSTART, &[0xD7, 0xD6, 0x9D])?; // Copied from GxEPD2 library, does it do anything?
 
         self.command_with_data(command::DATA_ENTRY_MODE, &[flag::DATA_ENTRY_INCRY_INCRX])?;
 
@@ -66,25 +69,50 @@ where
 
         self.use_full_frame()?;
 
+        // self.set_partial_lut()?; // Not sure if this does anything
+
         self.wait_until_idle();
+
         Ok(())
     }
 
     /// Update the whole BW buffer on the display driver
     pub fn update_bw_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
-        self.command_with_data(command::WRITE_BW_DATA, &buffer)
+        self.command_with_data(command::WRITE_BW_DATA, buffer)
+    }
+
+    pub fn update_partial_bw_frame(
+        &mut self,
+        buffer: &[u8],
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Result<(), DisplayError> {
+        self.use_partial_frame(x, y, width, height)?;
+        self.command_with_data(command::WRITE_BW_DATA, buffer)?;
+
+        Ok(())
     }
 
     /// Update the whole Red buffer on the display driver
     pub fn update_red_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
-        self.command_with_data(command::WRITE_RED_DATA, &buffer)
+        self.command_with_data(command::WRITE_RED_DATA, buffer)
     }
 
     /// Start an update of the whole display
     pub fn display_frame(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])?;
+        self.command(command::MASTER_ACTIVATE)?;
+        self.wait_until_idle();
+        Ok(())
+    }
+
+    /// Start a partial of the display
+    pub fn display_partial_frame(&mut self) -> Result<(), DisplayError> {
+        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_2])?;
         self.command(command::MASTER_ACTIVATE)?;
         self.wait_until_idle();
         Ok(())
@@ -98,6 +126,18 @@ where
         let color = color::Color::White.get_byte_value();
 
         self.command(command::WRITE_BW_DATA)?;
+        self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
+        Ok(())
+    }
+
+    /// Make the whole red frame on the display driver white
+    pub fn clear_red_frame(&mut self) -> Result<(), DisplayError> {
+        self.use_full_frame()?;
+
+        // TODO: allow non-white background color
+        let color = color::Color::White.inverse().get_byte_value();
+
+        self.command(command::WRITE_RED_DATA)?;
         self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
         Ok(())
     }
@@ -134,16 +174,21 @@ where
     }
 
     fn use_full_frame(&mut self) -> Result<(), DisplayError> {
-        // choose full frame/ram
-        self.set_ram_area(
-            0,
-            0,
-            u32::from(Self::WIDTH) - 1,
-            u32::from(Self::HEIGHT) - 1,
-        )?;
+        self.use_partial_frame(0, 0, Self::WIDTH.into(), Self::HEIGHT.into())?;
+        Ok(())
+    }
 
-        // start from the beginning
-        self.set_ram_counter(0, 0)
+    fn use_partial_frame(
+        &mut self,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Result<(), DisplayError> {
+        // TODO: make sure positions are byte-aligned
+        self.set_ram_area(x, y, x + width - 1, y + height - 1)?;
+        self.set_ram_counter(x, y)?;
+        Ok(())
     }
 
     fn set_ram_area(
@@ -180,6 +225,11 @@ where
 
         // 2 Databytes: A[7:0] & 0..A[8]
         self.command_with_data(command::SET_RAMY_COUNTER, &[y as u8, (y >> 8) as u8])?;
+        Ok(())
+    }
+
+    fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
+        self.command_with_data(command::WRITE_LUT, &LUT_PARTIAL_UPDATE)?;
         Ok(())
     }
 

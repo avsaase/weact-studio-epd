@@ -21,9 +21,8 @@ pub enum DisplayRotation {
     Rotate270,
 }
 
-/// Computes the needed buffer length. Takes care of rounding up in case width
-/// is not divisible by 8.
-const fn buffer_len(width: usize, height: usize) -> usize {
+/// Computes the needed buffer length. Takes care of rounding up in case `width` is not divisible by 8.
+pub const fn buffer_len(width: usize, height: usize) -> usize {
     (width + 7) / 8 * height
 }
 
@@ -33,7 +32,7 @@ pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize
     is_inverted: bool,
 }
 
-pub type BwDisplay2_9 = Display<128, 296, { buffer_len(128, 296) }>;
+pub type BwDisplay2_9 = Display<128, 296, { buffer_len(128usize, 296) }>;
 
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     Display<WIDTH, HEIGHT, BUFFER_SIZE>
@@ -51,13 +50,13 @@ pub trait DisplayTrait: DrawTarget {
     /// Clears the buffer of the display with the chosen background color
     fn clear_buffer(&mut self, background_color: Color) {
         let fill_color = if self.is_inverted() {
-            background_color.inverse().get_byte_value()
+            background_color.inverse()
         } else {
-            background_color.get_byte_value()
+            background_color
         };
 
         for elem in self.get_mut_buffer().iter_mut() {
-            *elem = fill_color
+            *elem = fill_color.get_byte_value();
         }
     }
 
@@ -94,7 +93,6 @@ pub trait DisplayTrait: DrawTarget {
             return Ok(());
         }
 
-        // Give us index inside the buffer and the bit-position in that u8 which needs to be changed
         let (index, bit) = find_position(point.x as u32, point.y as u32, width, height, rotation);
         let index = index as usize;
 
@@ -132,7 +130,7 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for p in pixels.into_iter() {
-            self.draw_helper(WIDTH.into(), HEIGHT.into(), p)?;
+            self.draw_helper(WIDTH, HEIGHT, p)?;
         }
         Ok(())
     }
@@ -144,12 +142,8 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> OriginDimens
     fn size(&self) -> Size {
         //if display is rotated 90 deg or 270 then swap height and width
         match self.rotation() {
-            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
-                Size::new(WIDTH.into(), HEIGHT.into())
-            }
-            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
-                Size::new(HEIGHT.into(), WIDTH.into())
-            }
+            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => Size::new(WIDTH, HEIGHT),
+            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => Size::new(HEIGHT, WIDTH),
         }
     }
 }
@@ -225,4 +219,76 @@ fn find_rotation(x: u32, y: u32, width: u32, height: u32, rotation: DisplayRotat
         }
     }
     (nx, ny)
+}
+
+pub struct VarDisplay<'a> {
+    width: u32,
+    height: u32,
+    rotation: DisplayRotation,
+    is_inverted: bool,
+    buffer: &'a mut [u8],
+}
+
+impl<'a> VarDisplay<'a> {
+    pub fn bw(width: u32, height: u32, buffer: &'a mut [u8]) -> Self {
+        Self {
+            width,
+            height,
+            rotation: DisplayRotation::Rotate0,
+            is_inverted: false,
+            buffer,
+        }
+    }
+}
+
+impl DisplayTrait for VarDisplay<'_> {
+    fn buffer(&self) -> &[u8] {
+        self.buffer
+    }
+
+    fn get_mut_buffer(&mut self) -> &mut [u8] {
+        self.buffer
+    }
+
+    fn set_rotation(&mut self, rotation: DisplayRotation) {
+        self.rotation = rotation;
+    }
+
+    fn rotation(&self) -> DisplayRotation {
+        self.rotation
+    }
+
+    fn is_inverted(&self) -> bool {
+        self.is_inverted
+    }
+}
+
+impl DrawTarget for VarDisplay<'_> {
+    type Color = BinaryColor;
+
+    type Error = DisplayError;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for p in pixels.into_iter() {
+            self.draw_helper(self.width, self.height, p)?;
+        }
+        Ok(())
+    }
+}
+
+impl OriginDimensions for VarDisplay<'_> {
+    fn size(&self) -> Size {
+        //if display is rotated 90 deg or 270 then swap height and width
+        match self.rotation() {
+            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
+                Size::new(self.width, self.height)
+            }
+            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
+                Size::new(self.height, self.width)
+            }
+        }
+    }
 }

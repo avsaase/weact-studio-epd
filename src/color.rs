@@ -9,7 +9,7 @@ pub enum Color {
 }
 
 impl Color {
-    pub(crate) fn get_byte_value(self) -> u8 {
+    pub fn get_byte_value(self) -> u8 {
         match self {
             Color::Black => 0x00,
             Color::White => 0xff,

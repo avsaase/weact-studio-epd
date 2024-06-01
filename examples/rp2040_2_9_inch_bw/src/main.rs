@@ -8,7 +8,7 @@ use embassy_rp::{
     gpio::{Input, Level, Output, Pull},
     spi::{Config, Spi},
 };
-use embassy_time::Delay;
+use embassy_time::{Delay, Timer};
 use embedded_graphics::{
     geometry::{Point, Size},
     pixelcolor::BinaryColor,
@@ -19,7 +19,7 @@ use embedded_hal_bus::spi::ExclusiveDevice;
 use panic_probe as _;
 use weact_studio_epd::{
     color::Color,
-    graphics::{BwDisplay2_9, DisplayTrait},
+    graphics::{buffer_len, BwDisplay2_9, DisplayTrait, VarDisplay},
     Driver,
 };
 
@@ -42,12 +42,30 @@ async fn main(_spawner: Spawner) {
     let mut display = BwDisplay2_9::bw();
 
     driver.init().unwrap();
-    driver.clear_bw_frame().unwrap();
+    // driver.clear_bw_frame().unwrap();
+    // driver.display_frame().unwrap();
 
     display.clear_buffer(Color::White);
-    let _ = Rectangle::new(Point::new(10, 10), Size::new(40, 40))
+
+    let _ = Rectangle::new(Point::new(16, 16), Size::new(40, 40))
         .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
         .draw(&mut display);
     driver.update_bw_frame(display.buffer()).unwrap();
     driver.display_frame().unwrap();
+
+    Timer::after_millis(500).await;
+
+    // let mut buffer = [Color::White.get_byte_value(); buffer_len(40, 40)];
+    // let mut partial_display = VarDisplay::bw(40, 40, &mut buffer);
+
+    // driver.clear_bw_frame().unwrap();
+    // partial_display.clear_buffer(Color::White);
+    let _ = Rectangle::new(Point::new(56, 56), Size::new(40, 40))
+        .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
+        .draw(&mut display);
+    // driver
+    //     .update_partial_bw_frame(partial_display.buffer(), 32, 32, 40, 40)
+    //     .unwrap();
+    driver.update_bw_frame(display.buffer()).unwrap();
+    driver.display_partial_frame().unwrap();
 }
