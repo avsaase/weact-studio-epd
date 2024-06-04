@@ -40,7 +40,7 @@ where
 
     /// Initialize the display
     pub fn init(&mut self) -> Result<(), DisplayError> {
-        self.reset();
+        self.hw_reset();
         self.command(command::SW_RESET)?;
         self.delay.delay_ms(10);
         self.wait_until_idle();
@@ -63,9 +63,9 @@ where
             &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
         )?;
 
-        self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])?;
-
         self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])?;
+
+        self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])?;
 
         self.use_full_frame()?;
 
@@ -76,10 +76,23 @@ where
         Ok(())
     }
 
+    pub fn hw_reset(&mut self) {
+        self.reset.set_low().unwrap();
+        self.delay.delay_ms(RESET_DELAY_MS);
+        self.reset.set_high().unwrap();
+        self.delay.delay_ms(RESET_DELAY_MS);
+    }
+
+    pub fn deep_sleep(&mut self) -> Result<(), DisplayError> {
+        self.command(command::DEEP_SLEEP)?;
+        Ok(())
+    }
+
     /// Update the whole BW buffer on the display driver
     pub fn update_bw_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
-        self.command_with_data(command::WRITE_BW_DATA, buffer)
+        self.command_with_data(command::WRITE_BW_DATA, buffer)?;
+        Ok(())
     }
 
     pub fn update_partial_bw_frame(
@@ -92,14 +105,14 @@ where
     ) -> Result<(), DisplayError> {
         self.use_partial_frame(x, y, width, height)?;
         self.command_with_data(command::WRITE_BW_DATA, buffer)?;
-
         Ok(())
     }
 
     /// Update the whole Red buffer on the display driver
     pub fn update_red_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
-        self.command_with_data(command::WRITE_RED_DATA, buffer)
+        self.command_with_data(command::WRITE_RED_DATA, buffer)?;
+        Ok(())
     }
 
     /// Start an update of the whole display
@@ -110,7 +123,7 @@ where
         Ok(())
     }
 
-    /// Start a partial of the display
+    /// Start a partial update of the display
     pub fn display_partial_frame(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_2])?;
         self.command(command::MASTER_ACTIVATE)?;
@@ -142,43 +155,12 @@ where
         Ok(())
     }
 
-    fn reset(&mut self) {
-        self.reset.set_low().unwrap();
-        self.delay.delay_ms(RESET_DELAY_MS);
-        self.reset.set_high().unwrap();
-        self.delay.delay_ms(RESET_DELAY_MS);
-    }
-
-    /// Wrapper function around display-interface send_commands function
-    fn command(&mut self, command: u8) -> Result<(), DisplayError> {
-        self.interface.send_commands(DataFormat::U8(&[command]))
-    }
-
-    /// Basic function for sending an array of u8-values of data over spi
-    /// Wrapper function around display-interface send_data function
-    fn data(&mut self, data: &[u8]) -> Result<(), DisplayError> {
-        self.interface.send_data(DataFormat::U8(data))
-    }
-
-    /// Basic function for sending a command and the data belonging to it.
-    fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
-        self.command(command)?;
-        self.data(data)
-    }
-
-    /// Waits until device isn't busy anymore (busy == HIGH)
-    fn wait_until_idle(&mut self) {
-        while self.busy.is_high().unwrap_or(true) {
-            self.delay.delay_ms(1)
-        }
-    }
-
-    fn use_full_frame(&mut self) -> Result<(), DisplayError> {
-        self.use_partial_frame(0, 0, Self::WIDTH.into(), Self::HEIGHT.into())?;
+    pub fn use_full_frame(&mut self) -> Result<(), DisplayError> {
+        self.use_partial_frame(0, 0, u32::from(Self::WIDTH), u32::from(Self::HEIGHT))?;
         Ok(())
     }
 
-    fn use_partial_frame(
+    pub fn use_partial_frame(
         &mut self,
         x: u32,
         y: u32,
@@ -191,7 +173,7 @@ where
         Ok(())
     }
 
-    fn set_ram_area(
+    pub fn set_ram_area(
         &mut self,
         start_x: u32,
         start_y: u32,
@@ -218,7 +200,7 @@ where
         Ok(())
     }
 
-    fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<(), DisplayError> {
+    pub fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<(), DisplayError> {
         // x is positioned in bytes, so the last 3 bits which show the position inside a byte in the ram
         // aren't relevant
         self.command_with_data(command::SET_RAMX_COUNTER, &[(x >> 3) as u8])?;
@@ -228,12 +210,40 @@ where
         Ok(())
     }
 
-    fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
+    pub fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::WRITE_LUT, &LUT_PARTIAL_UPDATE)?;
         Ok(())
     }
 
-    fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
+    /// Wrapper function around display-interface send_commands function
+    pub fn command(&mut self, command: u8) -> Result<(), DisplayError> {
+        self.interface.send_commands(DataFormat::U8(&[command]))?;
+        Ok(())
+    }
+
+    /// Basic function for sending an array of u8-values of data over spi
+    /// Wrapper function around display-interface send_data function
+    fn data(&mut self, data: &[u8]) -> Result<(), DisplayError> {
+        self.interface.send_data(DataFormat::U8(data))?;
+        self.wait_until_idle();
+        Ok(())
+    }
+
+    /// Waits until device isn't busy anymore (busy == HIGH)
+    pub fn wait_until_idle(&mut self) {
+        while self.busy.is_high().unwrap_or(true) {
+            self.delay.delay_ms(1)
+        }
+    }
+
+    /// Basic function for sending a command and the data belonging to it.
+    pub fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
+        self.command(command)?;
+        self.data(data)?;
+        Ok(())
+    }
+
+    pub fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
         for _ in 0..repetitions {
             self.data(&[data])?;
         }

@@ -21,7 +21,8 @@ pub enum DisplayRotation {
     Rotate270,
 }
 
-/// Computes the needed buffer length. Takes care of rounding up in case `width` is not divisible by 8.
+/// Computes the needed buffer length. Takes care of rounding up in case `width`
+/// is not divisible by 8.
 pub const fn buffer_len(width: usize, height: usize) -> usize {
     (width + 7) / 8 * height
 }
@@ -29,7 +30,7 @@ pub const fn buffer_len(width: usize, height: usize) -> usize {
 pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> {
     buffer: [u8; BUFFER_SIZE],
     rotation: DisplayRotation,
-    is_inverted: bool,
+    pub is_inverted: bool,
 }
 
 pub type BwDisplay2_9 = Display<128, 296, { buffer_len(128usize, 296) }>;
@@ -39,8 +40,8 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
 {
     pub fn bw() -> Self {
         Self {
-            buffer: [0; BUFFER_SIZE],
-            rotation: DisplayRotation::Rotate0,
+            buffer: [Color::White.get_byte_value(); BUFFER_SIZE],
+            rotation: DisplayRotation::default(),
             is_inverted: false,
         }
     }
@@ -55,7 +56,7 @@ pub trait DisplayTrait: DrawTarget {
             background_color
         };
 
-        for elem in self.get_mut_buffer().iter_mut() {
+        for elem in self.buffer_mut().iter_mut() {
             *elem = fill_color.get_byte_value();
         }
     }
@@ -64,7 +65,7 @@ pub trait DisplayTrait: DrawTarget {
     fn buffer(&self) -> &[u8];
 
     /// Returns a mutable buffer
-    fn get_mut_buffer(&mut self) -> &mut [u8];
+    fn buffer_mut(&mut self) -> &mut [u8];
 
     /// Sets the rotation of the display
     fn set_rotation(&mut self, rotation: DisplayRotation);
@@ -86,7 +87,7 @@ pub trait DisplayTrait: DrawTarget {
     ) -> Result<(), Self::Error> {
         let rotation = self.rotation();
         let is_inverted = self.is_inverted();
-        let buffer = self.get_mut_buffer();
+        let buffer = self.buffer_mut();
 
         let Pixel(point, color) = pixel;
         if outside_display(point, width, height, rotation) {
@@ -155,7 +156,7 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DisplayTrait
         &self.buffer
     }
 
-    fn get_mut_buffer(&mut self) -> &mut [u8] {
+    fn buffer_mut(&mut self) -> &mut [u8] {
         &mut self.buffer
     }
 
@@ -221,33 +222,33 @@ fn find_rotation(x: u32, y: u32, width: u32, height: u32, rotation: DisplayRotat
     (nx, ny)
 }
 
-pub struct VarDisplay<'a> {
-    width: u32,
-    height: u32,
+pub struct VarDisplay<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> {
     rotation: DisplayRotation,
     is_inverted: bool,
-    buffer: &'a mut [u8],
+    buffer: [u8; BUFFER_SIZE],
 }
 
-impl<'a> VarDisplay<'a> {
-    pub fn bw(width: u32, height: u32, buffer: &'a mut [u8]) -> Self {
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
+    VarDisplay<WIDTH, HEIGHT, BUFFER_SIZE>
+{
+    pub fn bw() -> Self {
         Self {
-            width,
-            height,
-            rotation: DisplayRotation::Rotate0,
+            rotation: DisplayRotation::default(),
             is_inverted: false,
-            buffer,
+            buffer: [0; BUFFER_SIZE],
         }
     }
 }
 
-impl DisplayTrait for VarDisplay<'_> {
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DisplayTrait
+    for VarDisplay<WIDTH, HEIGHT, BUFFER_SIZE>
+{
     fn buffer(&self) -> &[u8] {
-        self.buffer
+        &self.buffer
     }
 
-    fn get_mut_buffer(&mut self) -> &mut [u8] {
-        self.buffer
+    fn buffer_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer
     }
 
     fn set_rotation(&mut self, rotation: DisplayRotation) {
@@ -263,9 +264,10 @@ impl DisplayTrait for VarDisplay<'_> {
     }
 }
 
-impl DrawTarget for VarDisplay<'_> {
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
+    for VarDisplay<WIDTH, HEIGHT, BUFFER_SIZE>
+{
     type Color = BinaryColor;
-
     type Error = DisplayError;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -273,22 +275,20 @@ impl DrawTarget for VarDisplay<'_> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for p in pixels.into_iter() {
-            self.draw_helper(self.width, self.height, p)?;
+            self.draw_helper(WIDTH, HEIGHT, p)?;
         }
         Ok(())
     }
 }
 
-impl OriginDimensions for VarDisplay<'_> {
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> OriginDimensions
+    for VarDisplay<WIDTH, HEIGHT, BUFFER_SIZE>
+{
     fn size(&self) -> Size {
         //if display is rotated 90 deg or 270 then swap height and width
         match self.rotation() {
-            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
-                Size::new(self.width, self.height)
-            }
-            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
-                Size::new(self.height, self.width)
-            }
+            DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => Size::new(WIDTH, HEIGHT),
+            DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => Size::new(HEIGHT, WIDTH),
         }
     }
 }
