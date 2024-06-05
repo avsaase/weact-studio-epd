@@ -1,9 +1,9 @@
 #![no_std]
 
 pub mod color;
-pub mod command;
+mod command;
 mod driver;
-pub mod flag;
+mod flag;
 #[cfg(feature = "graphics")]
 pub mod graphics;
 mod lut;

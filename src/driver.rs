@@ -28,7 +28,9 @@ where
     /// Display width
     const WIDTH: u16 = 128;
 
-    /// Create a new display driver
+    /// Create a new display driver.
+    ///
+    /// This does not initialize the display. Use [`Driver::init`] to do that.
     pub fn new(interface: DI, busy: BSY, reset: RST, delay: DELAY) -> Self {
         Self {
             interface,
@@ -44,7 +46,6 @@ where
         self.command(command::SW_RESET)?;
         self.delay.delay_ms(10);
         self.wait_until_idle();
-
         self.command_with_data(
             command::DRIVER_CONTROL,
             &[
@@ -53,24 +54,15 @@ where
                 0x00,
             ],
         )?;
-
-        // self.command_with_data(command::SET_SOFTSTART, &[0xD7, 0xD6, 0x9D])?; // Copied from GxEPD2 library, does it do anything?
-
         self.command_with_data(command::DATA_ENTRY_MODE, &[flag::DATA_ENTRY_INCRY_INCRX])?;
-
         self.command_with_data(
             command::BORDER_WAVEFORM_CONTROL,
             &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
         )?;
-
         self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])?;
-
         self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])?;
-
-        self.use_full_frame()?;
-
         // self.set_partial_lut()?; // Not sure if this does anything
-
+        self.use_full_frame()?;
         self.wait_until_idle();
 
         Ok(())
@@ -83,19 +75,22 @@ where
         self.delay.delay_ms(RESET_DELAY_MS);
     }
 
-    pub fn deep_sleep(&mut self) -> Result<(), DisplayError> {
-        self.command(command::DEEP_SLEEP)?;
-        Ok(())
-    }
-
-    /// Update the whole BW buffer on the display driver
-    pub fn update_bw_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+    /// Write to the full B/W buffer.
+    pub fn write_bw_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_BW_DATA, buffer)?;
         Ok(())
     }
 
-    pub fn update_partial_bw_frame(
+    /// Write to the full red buffer.
+    pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+        self.use_full_frame()?;
+        self.command_with_data(command::WRITE_RED_DATA, buffer)?;
+        Ok(())
+    }
+
+    /// Write to part of the B/W buffer. `x`, `y`, `width`, and `height` must be multiples of 8.
+    pub fn write_partial_bw_buffer(
         &mut self,
         buffer: &[u8],
         x: u32,
@@ -108,31 +103,38 @@ where
         Ok(())
     }
 
-    /// Update the whole Red buffer on the display driver
-    pub fn update_red_frame(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
-        self.use_full_frame()?;
+    /// Write to part of the red buffer. `x`, `y`, `width`, and `height` must be multiples of 8.
+    pub fn write_partial_red_buffer(
+        &mut self,
+        buffer: &[u8],
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Result<(), DisplayError> {
+        self.use_partial_frame(x, y, width, height)?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
         Ok(())
     }
 
-    /// Start an update of the whole display
-    pub fn display_frame(&mut self) -> Result<(), DisplayError> {
+    /// Start an update of the whole display.
+    pub fn full_refresh(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])?;
         self.command(command::MASTER_ACTIVATE)?;
         self.wait_until_idle();
         Ok(())
     }
 
-    /// Start a partial update of the display
-    pub fn display_partial_frame(&mut self) -> Result<(), DisplayError> {
+    /// Start a quick refresh of the display.
+    pub fn quick_refresh(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_2])?;
         self.command(command::MASTER_ACTIVATE)?;
         self.wait_until_idle();
         Ok(())
     }
 
-    /// Make the whole black and white frame on the display driver white
-    pub fn clear_bw_frame(&mut self) -> Result<(), DisplayError> {
+    /// Make the whole black and white frame on the display driver white.
+    pub fn clear_bw_buffer(&mut self) -> Result<(), DisplayError> {
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
@@ -143,24 +145,24 @@ where
         Ok(())
     }
 
-    /// Make the whole red frame on the display driver white
-    pub fn clear_red_frame(&mut self) -> Result<(), DisplayError> {
+    /// Make the whole red frame on the display driver white.
+    pub fn clear_red_buffer(&mut self) -> Result<(), DisplayError> {
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
-        let color = color::Color::White.inverse().get_byte_value();
+        let color = color::Color::White.get_byte_value();
 
         self.command(command::WRITE_RED_DATA)?;
         self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
         Ok(())
     }
 
-    pub fn use_full_frame(&mut self) -> Result<(), DisplayError> {
+    fn use_full_frame(&mut self) -> Result<(), DisplayError> {
         self.use_partial_frame(0, 0, u32::from(Self::WIDTH), u32::from(Self::HEIGHT))?;
         Ok(())
     }
 
-    pub fn use_partial_frame(
+    fn use_partial_frame(
         &mut self,
         x: u32,
         y: u32,
@@ -173,7 +175,7 @@ where
         Ok(())
     }
 
-    pub fn set_ram_area(
+    fn set_ram_area(
         &mut self,
         start_x: u32,
         start_y: u32,
@@ -200,7 +202,7 @@ where
         Ok(())
     }
 
-    pub fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<(), DisplayError> {
+    fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<(), DisplayError> {
         // x is positioned in bytes, so the last 3 bits which show the position inside a byte in the ram
         // aren't relevant
         self.command_with_data(command::SET_RAMX_COUNTER, &[(x >> 3) as u8])?;
@@ -210,18 +212,22 @@ where
         Ok(())
     }
 
-    pub fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
+    #[allow(unused)]
+    fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
         self.command_with_data(command::WRITE_LUT, &LUT_PARTIAL_UPDATE)?;
         Ok(())
     }
 
-    /// Wrapper function around display-interface send_commands function
-    pub fn command(&mut self, command: u8) -> Result<(), DisplayError> {
+    /// Send a command to the display.
+    ///
+    /// Wrapper function around display-interface send_commands function.
+    fn command(&mut self, command: u8) -> Result<(), DisplayError> {
         self.interface.send_commands(DataFormat::U8(&[command]))?;
         Ok(())
     }
 
-    /// Basic function for sending an array of u8-values of data over spi
+    /// Basic function for sending an array of u8-values of data over spi.
+    ///
     /// Wrapper function around display-interface send_data function
     fn data(&mut self, data: &[u8]) -> Result<(), DisplayError> {
         self.interface.send_data(DataFormat::U8(data))?;
@@ -229,21 +235,22 @@ where
         Ok(())
     }
 
-    /// Waits until device isn't busy anymore (busy == HIGH)
-    pub fn wait_until_idle(&mut self) {
+    /// Waits until device isn't busy anymore (busy == HIGH).
+    fn wait_until_idle(&mut self) {
         while self.busy.is_high().unwrap_or(true) {
             self.delay.delay_ms(1)
         }
     }
 
     /// Basic function for sending a command and the data belonging to it.
-    pub fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
+    fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
         self.command(command)?;
         self.data(data)?;
         Ok(())
     }
 
-    pub fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
+    /// Helper function to send a byte to the display mutiple times.
+    fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
         for _ in 0..repetitions {
             self.data(&[data])?;
         }

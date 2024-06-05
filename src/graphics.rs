@@ -10,14 +10,14 @@ use crate::color::Color;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum DisplayRotation {
-    /// No rotation
+    /// No rotation.
     #[default]
     Rotate0,
-    /// Rotate by 90 degrees clockwise
+    /// Rotate by 90 degrees clockwise.
     Rotate90,
-    /// Rotate by 180 degrees clockwise
+    /// Rotate by 180 degrees clockwise.
     Rotate180,
-    /// Rotate 270 degrees clockwise
+    /// Rotate 270 degrees clockwise.
     Rotate270,
 }
 
@@ -48,7 +48,7 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
 }
 
 pub trait DisplayTrait: DrawTarget {
-    /// Clears the buffer of the display with the chosen background color
+    /// Clears the buffer of the display with the chosen background color.
     fn clear_buffer(&mut self, background_color: Color) {
         let fill_color = if self.is_inverted() {
             background_color.inverse()
@@ -61,24 +61,22 @@ pub trait DisplayTrait: DrawTarget {
         }
     }
 
-    /// Returns the buffer
+    /// Returns the buffer.
     fn buffer(&self) -> &[u8];
 
-    /// Returns a mutable buffer
+    /// Returns a mutable buffer.
     fn buffer_mut(&mut self) -> &mut [u8];
 
-    /// Sets the rotation of the display
+    /// Sets the rotation of the display.
     fn set_rotation(&mut self, rotation: DisplayRotation);
 
-    /// Get the current rotation of the display
+    /// Get the current rotation of the display.
     fn rotation(&self) -> DisplayRotation;
 
-    /// If the color for this display is inverted
+    /// If the color for this display is inverted.
     fn is_inverted(&self) -> bool;
 
-    /// Helperfunction for the Embedded Graphics draw trait
-    ///
-    /// Becomes uneccesary when `const_generics` become stablised
+    /// Helper function for the Embedded Graphics draw trait.
     fn draw_helper(
         &mut self,
         width: u32,
@@ -235,6 +233,14 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         Self {
             rotation: DisplayRotation::default(),
             is_inverted: false,
+            buffer: [0; BUFFER_SIZE],
+        }
+    }
+
+    pub fn red() -> Self {
+        Self {
+            rotation: DisplayRotation::default(),
+            is_inverted: true,
             buffer: [0; BUFFER_SIZE],
         }
     }
