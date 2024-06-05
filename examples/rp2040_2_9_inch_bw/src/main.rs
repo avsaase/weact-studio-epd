@@ -67,7 +67,6 @@ async fn main(_spawner: Spawner) {
         .unwrap();
     driver.write_bw_buffer(display.buffer()).unwrap();
     driver.full_refresh().unwrap();
-    driver.write_bw_buffer(display.buffer()).unwrap();
     driver.write_red_buffer(display.buffer()).unwrap();
 
     Timer::after_millis(500).await;
@@ -85,16 +84,12 @@ async fn main(_spawner: Spawner) {
 
         let _ = Text::with_text_style(&string_buf, Point::new(128, 32), style, text_style)
             .draw(&mut partial_display_bw);
-
         string_buf.clear();
 
         driver
             .write_partial_bw_buffer(partial_display_bw.buffer(), 56, 136, 64, 128)
             .unwrap();
         driver.quick_refresh().unwrap();
-        driver
-            .write_partial_bw_buffer(partial_display_bw.buffer(), 56, 136, 64, 128)
-            .unwrap();
         driver
             .write_partial_red_buffer(partial_display_bw.buffer(), 56, 136, 64, 128)
             .unwrap();
