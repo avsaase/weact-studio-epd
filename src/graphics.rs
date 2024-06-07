@@ -37,7 +37,7 @@ pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize
 }
 
 /// Display buffer for the WeAct Studio 2.9 inch B/W display.
-pub type Bw0290Display = Display<128, 296, { buffer_len(128usize, 296) }>;
+pub type Display290Bw = Display<128, 296, { buffer_len(128usize, 296) }>;
 
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     Display<WIDTH, HEIGHT, BUFFER_SIZE>

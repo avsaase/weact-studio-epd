@@ -23,7 +23,7 @@ use panic_probe as _;
 use profont::PROFONT_24_POINT;
 use weact_studio_epd::{
     color::Color,
-    graphics::{buffer_len, Bw0290Display, Display, DisplayRotation, DisplayTrait},
+    graphics::{buffer_len, Display, Display290Bw, DisplayRotation, DisplayTrait},
     Driver,
 };
 
@@ -48,7 +48,7 @@ async fn main(_spawner: Spawner) {
 
     let mut driver = Driver::new(spi_interface, busy, res, Delay);
 
-    let mut display = Bw0290Display::bw();
+    let mut display = Display290Bw::bw();
     display.set_rotation(DisplayRotation::Rotate90);
 
     let mut partial_display_bw: Display<64, 128, { buffer_len(64, 128) }> = Display::bw();
