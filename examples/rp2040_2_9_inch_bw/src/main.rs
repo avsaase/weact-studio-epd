@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+
 use core::fmt::Write;
 
 use defmt_rtt as _;
@@ -44,8 +45,6 @@ async fn main(_spawner: Spawner) {
     let spi_device = ExclusiveDevice::new(spi_bus, cs, Delay);
     let spi_interface = SPIInterface::new(spi_device, dc);
 
-    let style = MonoTextStyle::new(&PROFONT_24_POINT, BinaryColor::Off);
-
     let mut driver = Driver::new(spi_interface, busy, res, Delay);
 
     let mut display = Display290Bw::bw();
@@ -57,7 +56,7 @@ async fn main(_spawner: Spawner) {
     let mut now = Instant::now();
     driver.init().unwrap();
 
-    display.clear_buffer(Color::White);
+    let style = MonoTextStyle::new(&PROFONT_24_POINT, BinaryColor::Off);
 
     let mut string_buf = String::<30>::new();
     write!(string_buf, "Time:\nElapsed:").unwrap();
