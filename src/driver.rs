@@ -11,7 +11,7 @@ use crate::{color, command, flag, lut, Result};
 const RESET_DELAY_MS: u32 = 50;
 
 /// The main driver struct that manages the communication with the display.
-pub struct Driver<DI, BSY, RST, DELAY> {
+pub struct Driver<const WIDTH: u16, const HEIGHT: u16, DI, BSY, RST, DELAY> {
     interface: DI,
     busy: BSY,
     reset: RST,
@@ -21,19 +21,14 @@ pub struct Driver<DI, BSY, RST, DELAY> {
     initial_full_refresh_done: bool,
 }
 
-impl<DI, BSY, RST, DELAY> Driver<DI, BSY, RST, DELAY>
+impl<const WIDTH: u16, const HEIGHT: u16, DI, BSY, RST, DELAY>
+    Driver<WIDTH, HEIGHT, DI, BSY, RST, DELAY>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
 {
-    /// Display height
-    const HEIGHT: u16 = 296;
-
-    /// Display width
-    const WIDTH: u16 = 128;
-
     /// Create a new display driver.
     ///
     /// Use [`Self::init`] to initialize the display.
@@ -56,11 +51,7 @@ where
         self.wait_until_idle();
         self.command_with_data(
             command::DRIVER_CONTROL,
-            &[
-                (Self::HEIGHT - 1) as u8,
-                ((Self::HEIGHT - 1) >> 8) as u8,
-                0x00,
-            ],
+            &[(HEIGHT - 1) as u8, ((HEIGHT - 1) >> 8) as u8, 0x00],
         )?;
         self.command_with_data(command::DATA_ENTRY_MODE, &[flag::DATA_ENTRY_INCRY_INCRX])?;
         self.command_with_data(
@@ -136,7 +127,7 @@ where
         let color = color::Color::White.get_byte_value();
 
         self.command(command::WRITE_BW_DATA)?;
-        self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
+        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
         Ok(())
     }
 
@@ -150,7 +141,7 @@ where
         let color = color::Color::White.get_byte_value();
 
         self.command(command::WRITE_RED_DATA)?;
-        self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
+        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
         Ok(())
     }
 
@@ -168,6 +159,8 @@ where
     /// Start a quick refresh of the display.
     ///
     /// If the display hasn't done a full refresh yet, it will do that first.
+    ///
+    /// This is only supported on B/W displays.
     pub fn quick_refresh(&mut self) -> Result<()> {
         if !self.initial_full_refresh_done {
             // There a bug here which causes the new image to overwrite the existing image which then
@@ -196,6 +189,8 @@ where
     }
 
     /// Update the screen with the provided buffer using a quick refresh.
+    ///
+    /// This is only supported on B/W displays.
     pub fn quick_update(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.quick_refresh()?;
@@ -205,6 +200,8 @@ where
     }
 
     /// Update the screen with the provided buffer at the given position using a partial refresh.
+    ///
+    /// This is only supported on B/W displays.
     pub fn quick_partial_update(
         &mut self,
         buffer: &[u8],
@@ -221,7 +218,7 @@ where
     }
 
     fn use_full_frame(&mut self) -> Result<()> {
-        self.use_partial_frame(0, 0, u32::from(Self::WIDTH), u32::from(Self::HEIGHT))?;
+        self.use_partial_frame(0, 0, u32::from(WIDTH), u32::from(HEIGHT))?;
         Ok(())
     }
 

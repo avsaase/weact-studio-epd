@@ -44,7 +44,7 @@ async fn main(_spawner: Spawner) {
     let spi_device = ExclusiveDevice::new(spi_bus, cs, Delay);
     let spi_interface = SPIInterface::new(spi_device, dc);
 
-    let mut driver = Driver::new(spi_interface, busy, res, Delay);
+    let mut driver: Driver<128, 296, _, _, _, _> = Driver::new(spi_interface, busy, res, Delay);
 
     let mut display = Display290Bw::bw();
     display.set_rotation(DisplayRotation::Rotate90);
