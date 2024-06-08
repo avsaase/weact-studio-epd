@@ -14,5 +14,9 @@ mod flag;
 pub mod graphics;
 mod lut;
 
+use display_interface::DisplayError;
 /// Display driver
 pub use driver::Driver;
+
+/// Alias for `Result<T, DisplayError>`.
+pub type Result<T> = core::result::Result<T, DisplayError>;

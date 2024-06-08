@@ -1,12 +1,12 @@
 use core::iter;
 
-use display_interface::{DataFormat, DisplayError, WriteOnlyDataCommand};
+use display_interface::{DataFormat, WriteOnlyDataCommand};
 use embedded_hal::{
     delay::DelayNs,
     digital::{InputPin, OutputPin},
 };
 
-use crate::{color, command, flag, lut};
+use crate::{color, command, flag, lut, Result};
 
 const RESET_DELAY_MS: u32 = 50;
 
@@ -49,7 +49,7 @@ where
     }
 
     /// Initialize the display
-    pub fn init(&mut self) -> Result<(), DisplayError> {
+    pub fn init(&mut self) -> Result<()> {
         self.hw_reset();
         self.command(command::SW_RESET)?;
         self.delay.delay_ms(10);
@@ -83,7 +83,7 @@ where
     }
 
     /// Write to the B/W buffer.
-    pub fn write_bw_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+    pub fn write_bw_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_BW_DATA, buffer)?;
         Ok(())
@@ -92,7 +92,7 @@ where
     /// Write to the red buffer.
     ///
     /// This buffer is also used for quick refreshes on B/W displays.
-    pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+    pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
         Ok(())
@@ -106,7 +106,7 @@ where
         y: u32,
         width: u32,
         height: u32,
-    ) -> Result<(), DisplayError> {
+    ) -> Result<()> {
         self.use_partial_frame(x, y, width, height)?;
         self.command_with_data(command::WRITE_BW_DATA, buffer)?;
         Ok(())
@@ -122,14 +122,14 @@ where
         y: u32,
         width: u32,
         height: u32,
-    ) -> Result<(), DisplayError> {
+    ) -> Result<()> {
         self.use_partial_frame(x, y, width, height)?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
         Ok(())
     }
 
     /// Make the whole black and white frame on the display driver white.
-    pub fn clear_bw_buffer(&mut self) -> Result<(), DisplayError> {
+    pub fn clear_bw_buffer(&mut self) -> Result<()> {
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
@@ -143,7 +143,7 @@ where
     /// Make the whole red frame on the display driver white.
     ///
     /// This buffer is also used for quick refreshes on B/W displays.
-    pub fn clear_red_buffer(&mut self) -> Result<(), DisplayError> {
+    pub fn clear_red_buffer(&mut self) -> Result<()> {
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
@@ -155,7 +155,7 @@ where
     }
 
     /// Start a full refresh of the display.
-    pub fn refresh(&mut self) -> Result<(), DisplayError> {
+    pub fn refresh(&mut self) -> Result<()> {
         self.initial_full_refresh_done = true;
         self.using_partial_mode = false;
 
@@ -168,7 +168,7 @@ where
     /// Start a quick refresh of the display.
     ///
     /// If the display hasn't done a full refresh yet, it will do that first.
-    pub fn quick_refresh(&mut self) -> Result<(), DisplayError> {
+    pub fn quick_refresh(&mut self) -> Result<()> {
         if !self.initial_full_refresh_done {
             // There a bug here which cuases the new image to overwrite the existing image qhich then slowly fades out.
             self.refresh()?;
@@ -186,7 +186,7 @@ where
     }
 
     /// Update the screen with the provided buffer using a full refresh.
-    pub fn update(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
         self.refresh()?;
@@ -196,7 +196,7 @@ where
     }
 
     /// Update the screen with the provided buffer using a quick refresh.
-    pub fn quick_update(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+    pub fn quick_update(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.quick_refresh()?;
         self.write_red_buffer(buffer)?;
@@ -212,7 +212,7 @@ where
         y: u32,
         width: u32,
         height: u32,
-    ) -> Result<(), DisplayError> {
+    ) -> Result<()> {
         self.write_partial_bw_buffer(buffer, x, y, width, height)?;
         self.quick_refresh()?;
         self.write_partial_red_buffer(buffer, x, y, width, height)?;
@@ -220,31 +220,19 @@ where
         Ok(())
     }
 
-    fn use_full_frame(&mut self) -> Result<(), DisplayError> {
+    fn use_full_frame(&mut self) -> Result<()> {
         self.use_partial_frame(0, 0, u32::from(Self::WIDTH), u32::from(Self::HEIGHT))?;
         Ok(())
     }
 
-    fn use_partial_frame(
-        &mut self,
-        x: u32,
-        y: u32,
-        width: u32,
-        height: u32,
-    ) -> Result<(), DisplayError> {
+    fn use_partial_frame(&mut self, x: u32, y: u32, width: u32, height: u32) -> Result<()> {
         // TODO: make sure positions are byte-aligned
         self.set_ram_area(x, y, x + width - 1, y + height - 1)?;
         self.set_ram_counter(x, y)?;
         Ok(())
     }
 
-    fn set_ram_area(
-        &mut self,
-        start_x: u32,
-        start_y: u32,
-        end_x: u32,
-        end_y: u32,
-    ) -> Result<(), DisplayError> {
+    fn set_ram_area(&mut self, start_x: u32, start_y: u32, end_x: u32, end_y: u32) -> Result<()> {
         assert!(start_x < end_x);
         assert!(start_y < end_y);
 
@@ -265,7 +253,7 @@ where
         Ok(())
     }
 
-    fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<(), DisplayError> {
+    fn set_ram_counter(&mut self, x: u32, y: u32) -> Result<()> {
         // x is positioned in bytes, so the last 3 bits which show the position inside a byte in the ram
         // aren't relevant
         self.command_with_data(command::SET_RAMX_COUNTER, &[(x >> 3) as u8])?;
@@ -276,13 +264,13 @@ where
     }
 
     /// Send a command to the display.
-    fn command(&mut self, command: u8) -> Result<(), DisplayError> {
+    fn command(&mut self, command: u8) -> Result<()> {
         self.interface.send_commands(DataFormat::U8(&[command]))?;
         Ok(())
     }
 
     /// Function for sending an array of u8-values of data over spi.
-    fn data(&mut self, data: &[u8]) -> Result<(), DisplayError> {
+    fn data(&mut self, data: &[u8]) -> Result<()> {
         self.interface.send_data(DataFormat::U8(data))?;
         self.wait_until_idle();
         Ok(())
@@ -296,14 +284,14 @@ where
     }
 
     /// Function for sending a command and the data belonging to it.
-    fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
+    fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<()> {
         self.command(command)?;
         self.data(data)?;
         Ok(())
     }
 
     /// Function to send a byte to the display mutiple times.
-    fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
+    fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<()> {
         let mut iter = iter::repeat(data).take(repetitions as usize);
         self.interface.send_data(DataFormat::U8Iter(&mut iter))?;
         Ok(())
