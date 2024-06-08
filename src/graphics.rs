@@ -2,7 +2,7 @@ use display_interface::DisplayError;
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},
-    pixelcolor::BinaryColor,
+    pixelcolor::{raw::RawU1, PixelColor},
     Pixel,
 };
 
@@ -28,7 +28,7 @@ pub const fn buffer_len(width: usize, height: usize) -> usize {
     (width + 7) / 8 * height
 }
 
-/// The in-memory display buffer to render to using `embedded-graphics`.
+/// In-memory display buffer to render to using `embedded-graphics`.
 ///
 /// `BUFFER_SIZE` can be calculated using [`buffer_len`].
 pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> {
@@ -83,12 +83,12 @@ pub trait DisplayTrait: DrawTarget {
     /// If the color for this display is inverted.
     fn is_inverted(&self) -> bool;
 
-    /// Helper function for the Embedded Graphics draw trait.
+    /// Helper function for the `embedded-graphics` `DrawTarget` trait.
     fn draw_helper(
         &mut self,
         width: u32,
         height: u32,
-        pixel: Pixel<BinaryColor>,
+        pixel: Pixel<Color>,
     ) -> Result<(), Self::Error> {
         let rotation = self.rotation();
         let is_inverted = self.is_inverted();
@@ -104,16 +104,14 @@ pub trait DisplayTrait: DrawTarget {
 
         // "Draw" the Pixel on that bit
         match color {
-            // White/Red
-            BinaryColor::On => {
+            Color::White => {
                 if is_inverted {
                     buffer[index] &= !bit;
                 } else {
                     buffer[index] |= bit;
                 }
             }
-            //Black
-            BinaryColor::Off => {
+            Color::Black => {
                 if is_inverted {
                     buffer[index] |= bit;
                 } else {
@@ -128,7 +126,7 @@ pub trait DisplayTrait: DrawTarget {
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
     for Display<WIDTH, HEIGHT, BUFFER_SIZE>
 {
-    type Color = BinaryColor;
+    type Color = Color;
     type Error = DisplayError;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -140,6 +138,10 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
         }
         Ok(())
     }
+}
+
+impl PixelColor for Color {
+    type Raw = RawU1;
 }
 
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> OriginDimensions

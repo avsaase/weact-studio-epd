@@ -14,7 +14,6 @@ use embassy_time::{Delay, Instant};
 use embedded_graphics::{
     geometry::Point,
     mono_font::MonoTextStyle,
-    pixelcolor::BinaryColor,
     text::{Alignment, Text, TextStyle, TextStyleBuilder},
     Drawable,
 };
@@ -56,7 +55,7 @@ async fn main(_spawner: Spawner) {
     let mut now = Instant::now();
     driver.init().unwrap();
 
-    let style = MonoTextStyle::new(&PROFONT_24_POINT, BinaryColor::Off);
+    let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
 
     let mut string_buf = String::<30>::new();
     write!(string_buf, "Time:\nElapsed:").unwrap();

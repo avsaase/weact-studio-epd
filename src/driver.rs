@@ -170,11 +170,11 @@ where
     /// If the display hasn't done a full refresh yet, it will do that first.
     pub fn quick_refresh(&mut self) -> Result<()> {
         if !self.initial_full_refresh_done {
-            // There a bug here which cuases the new image to overwrite the existing image qhich then slowly fades out.
+            // There a bug here which causes the new image to overwrite the existing image which then
+            // fades out over several updates.
             self.refresh()?;
         }
 
-        // TODO: check if ram area must be set before refreshing
         if !self.using_partial_mode {
             self.command_with_data(command::WRITE_LUT, &lut::LUT_PARTIAL_UPDATE)?;
             self.using_partial_mode = true;
