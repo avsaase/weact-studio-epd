@@ -1,5 +1,6 @@
 use core::panic;
 
+/// Color definition
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     /// Black color
@@ -9,13 +10,14 @@ pub enum Color {
 }
 
 impl Color {
-    pub fn get_byte_value(self) -> u8 {
+    pub(crate) fn get_byte_value(self) -> u8 {
         match self {
             Color::Black => 0x00,
             Color::White => 0xff,
         }
     }
 
+    /// Inverse the color
     pub fn inverse(self) -> Color {
         match self {
             Color::Black => Color::White,

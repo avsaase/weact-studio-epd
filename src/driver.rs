@@ -1,18 +1,24 @@
+use core::iter;
+
 use display_interface::{DataFormat, DisplayError, WriteOnlyDataCommand};
 use embedded_hal::{
     delay::DelayNs,
     digital::{InputPin, OutputPin},
 };
 
-use crate::{color, command, flag, lut::LUT_PARTIAL_UPDATE};
+use crate::{color, command, flag, lut};
 
-const RESET_DELAY_MS: u32 = 10;
+const RESET_DELAY_MS: u32 = 50;
 
+/// The main driver struct that manages the communication with the display.
 pub struct Driver<DI, BSY, RST, DELAY> {
     interface: DI,
     busy: BSY,
     reset: RST,
     delay: DELAY,
+    // State
+    using_partial_mode: bool,
+    initial_full_refresh_done: bool,
 }
 
 impl<DI, BSY, RST, DELAY> Driver<DI, BSY, RST, DELAY>
@@ -30,13 +36,15 @@ where
 
     /// Create a new display driver.
     ///
-    /// This does not initialize the display. Use [`Driver::init`] to do that.
+    /// Use [`Self::init`] to initialize the display.
     pub fn new(interface: DI, busy: BSY, reset: RST, delay: DELAY) -> Self {
         Self {
             interface,
             busy,
             reset,
             delay,
+            using_partial_mode: false,
+            initial_full_refresh_done: false,
         }
     }
 
@@ -61,13 +69,12 @@ where
         )?;
         self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])?;
         self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])?;
-        // self.set_partial_lut()?; // Not sure if this does anything
         self.use_full_frame()?;
         self.wait_until_idle();
-
         Ok(())
     }
 
+    /// Perform a hardware reset of the display.
     pub fn hw_reset(&mut self) {
         self.reset.set_low().unwrap();
         self.delay.delay_ms(RESET_DELAY_MS);
@@ -75,21 +82,23 @@ where
         self.delay.delay_ms(RESET_DELAY_MS);
     }
 
-    /// Write to the full B/W buffer.
+    /// Write to the B/W buffer.
     pub fn write_bw_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_BW_DATA, buffer)?;
         Ok(())
     }
 
-    /// Write to the full red buffer.
+    /// Write to the red buffer.
+    ///
+    /// This buffer is also used for quick refreshes on B/W displays.
     pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
         Ok(())
     }
 
-    /// Write to part of the B/W buffer. `x`, `y`, `width`, and `height` must be multiples of 8.
+    /// Write to the B/W buffer at the given position. `x`, `y`, `width`, and `height` must be multiples of 8.
     pub fn write_partial_bw_buffer(
         &mut self,
         buffer: &[u8],
@@ -103,7 +112,9 @@ where
         Ok(())
     }
 
-    /// Write to part of the red buffer. `x`, `y`, `width`, and `height` must be multiples of 8.
+    /// Write to the red buffer at the given position. `x`, `y`, `width`, and `height` must be multiples of 8.
+    ///
+    /// This buffer is also used for quick refreshes on B/W displays.
     pub fn write_partial_red_buffer(
         &mut self,
         buffer: &[u8],
@@ -114,22 +125,6 @@ where
     ) -> Result<(), DisplayError> {
         self.use_partial_frame(x, y, width, height)?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
-        Ok(())
-    }
-
-    /// Start an update of the whole display.
-    pub fn full_refresh(&mut self) -> Result<(), DisplayError> {
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])?;
-        self.command(command::MASTER_ACTIVATE)?;
-        self.wait_until_idle();
-        Ok(())
-    }
-
-    /// Start a quick refresh of the display.
-    pub fn quick_refresh(&mut self) -> Result<(), DisplayError> {
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_2])?;
-        self.command(command::MASTER_ACTIVATE)?;
-        self.wait_until_idle();
         Ok(())
     }
 
@@ -146,6 +141,8 @@ where
     }
 
     /// Make the whole red frame on the display driver white.
+    ///
+    /// This buffer is also used for quick refreshes on B/W displays.
     pub fn clear_red_buffer(&mut self) -> Result<(), DisplayError> {
         self.use_full_frame()?;
 
@@ -154,6 +151,72 @@ where
 
         self.command(command::WRITE_RED_DATA)?;
         self.data_x_times(color, u32::from(Self::WIDTH) / 8 * u32::from(Self::HEIGHT))?;
+        Ok(())
+    }
+
+    /// Start a full refresh of the display.
+    pub fn refresh(&mut self) -> Result<(), DisplayError> {
+        self.initial_full_refresh_done = true;
+        self.using_partial_mode = false;
+
+        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])?;
+        self.command(command::MASTER_ACTIVATE)?;
+        self.wait_until_idle();
+        Ok(())
+    }
+
+    /// Start a quick refresh of the display.
+    ///
+    /// If the display hasn't done a full refresh yet, it will do that first.
+    pub fn quick_refresh(&mut self) -> Result<(), DisplayError> {
+        if !self.initial_full_refresh_done {
+            // There a bug here which cuases the new image to overwrite the existing image qhich then slowly fades out.
+            self.refresh()?;
+        }
+
+        // TODO: check if ram area must be set before refreshing
+        if !self.using_partial_mode {
+            self.command_with_data(command::WRITE_LUT, &lut::LUT_PARTIAL_UPDATE)?;
+            self.using_partial_mode = true;
+        }
+        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::UNDOCUMENTED])?;
+        self.command(command::MASTER_ACTIVATE)?;
+        self.wait_until_idle();
+        Ok(())
+    }
+
+    /// Update the screen with the provided buffer using a full refresh.
+    pub fn update(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
+        self.refresh()?;
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
+        Ok(())
+    }
+
+    /// Update the screen with the provided buffer using a quick refresh.
+    pub fn quick_update(&mut self, buffer: &[u8]) -> Result<(), DisplayError> {
+        self.write_red_buffer(buffer)?;
+        self.quick_refresh()?;
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
+        Ok(())
+    }
+
+    /// Update the screen with the provided buffer at the given position using a partial refresh.
+    pub fn quick_partial_update(
+        &mut self,
+        buffer: &[u8],
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Result<(), DisplayError> {
+        self.write_partial_bw_buffer(buffer, x, y, width, height)?;
+        self.quick_refresh()?;
+        self.write_partial_red_buffer(buffer, x, y, width, height)?;
+        self.write_partial_bw_buffer(buffer, x, y, width, height)?;
         Ok(())
     }
 
@@ -212,23 +275,13 @@ where
         Ok(())
     }
 
-    #[allow(unused)]
-    fn set_partial_lut(&mut self) -> Result<(), DisplayError> {
-        self.command_with_data(command::WRITE_LUT, &LUT_PARTIAL_UPDATE)?;
-        Ok(())
-    }
-
     /// Send a command to the display.
-    ///
-    /// Wrapper function around display-interface send_commands function.
     fn command(&mut self, command: u8) -> Result<(), DisplayError> {
         self.interface.send_commands(DataFormat::U8(&[command]))?;
         Ok(())
     }
 
-    /// Basic function for sending an array of u8-values of data over spi.
-    ///
-    /// Wrapper function around display-interface send_data function
+    /// Function for sending an array of u8-values of data over spi.
     fn data(&mut self, data: &[u8]) -> Result<(), DisplayError> {
         self.interface.send_data(DataFormat::U8(data))?;
         self.wait_until_idle();
@@ -242,18 +295,17 @@ where
         }
     }
 
-    /// Basic function for sending a command and the data belonging to it.
+    /// Function for sending a command and the data belonging to it.
     fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<(), DisplayError> {
         self.command(command)?;
         self.data(data)?;
         Ok(())
     }
 
-    /// Helper function to send a byte to the display mutiple times.
+    /// Function to send a byte to the display mutiple times.
     fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<(), DisplayError> {
-        for _ in 0..repetitions {
-            self.data(&[data])?;
-        }
+        let mut iter = iter::repeat(data).take(repetitions as usize);
+        self.interface.send_data(DataFormat::U8Iter(&mut iter))?;
         Ok(())
     }
 }

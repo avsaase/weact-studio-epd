@@ -9,7 +9,7 @@ use embassy_rp::{
     gpio::{Input, Level, Output, Pull},
     spi::{Config, Spi},
 };
-use embassy_time::{Delay, Instant, Timer};
+use embassy_time::{Delay, Instant};
 use embedded_graphics::{
     geometry::Point,
     mono_font::MonoTextStyle,
@@ -57,19 +57,16 @@ async fn main(_spawner: Spawner) {
     let mut now = Instant::now();
     driver.init().unwrap();
 
-    driver.clear_red_buffer().unwrap();
-    driver.clear_bw_buffer().unwrap();
+    display.clear_buffer(Color::White);
 
     let mut string_buf = String::<30>::new();
-    let _ = write!(string_buf, "Time:\nElapsed:").unwrap();
+    write!(string_buf, "Time:\nElapsed:").unwrap();
     let _ = Text::with_text_style(&string_buf, Point::new(8, 40), style, TextStyle::default())
         .draw(&mut display)
         .unwrap();
-    driver.write_bw_buffer(display.buffer()).unwrap();
-    driver.full_refresh().unwrap();
-    driver.write_red_buffer(display.buffer()).unwrap();
+    string_buf.clear();
 
-    Timer::after_millis(500).await;
+    driver.update(display.buffer()).unwrap();
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {
@@ -87,11 +84,7 @@ async fn main(_spawner: Spawner) {
         string_buf.clear();
 
         driver
-            .write_partial_bw_buffer(partial_display_bw.buffer(), 56, 136, 64, 128)
-            .unwrap();
-        driver.quick_refresh().unwrap();
-        driver
-            .write_partial_red_buffer(partial_display_bw.buffer(), 56, 136, 64, 128)
+            .quick_partial_update(partial_display_bw.buffer(), 56, 136, 64, 128)
             .unwrap();
 
         partial_display_bw.clear_buffer(Color::White);
