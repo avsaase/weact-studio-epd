@@ -58,7 +58,7 @@ async fn main(_spawner: Spawner) {
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
 
     let mut string_buf = String::<30>::new();
-    write!(string_buf, "Time:\nElapsed:").unwrap();
+    write!(string_buf, "Time:\nInterval:").unwrap();
     let _ = Text::with_text_style(&string_buf, Point::new(8, 40), style, TextStyle::default())
         .draw(&mut display)
         .unwrap();
@@ -72,7 +72,7 @@ async fn main(_spawner: Spawner) {
         now = Instant::now();
         let _ = write!(
             string_buf,
-            "{:6.0}ms\n{}ms",
+            "{:8.0}ms\n{}ms",
             now.as_millis(),
             elapsed.as_millis()
         );
@@ -82,7 +82,7 @@ async fn main(_spawner: Spawner) {
         string_buf.clear();
 
         driver
-            .quick_partial_update(partial_display_bw.buffer(), 56, 136, 64, 128)
+            .quick_partial_update(partial_display_bw.buffer(), 56, 156, 64, 128)
             .unwrap();
 
         partial_display_bw.clear_buffer(Color::White);
