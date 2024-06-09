@@ -5,15 +5,27 @@ edition = "2021"
 
 [dependencies]
 
-embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "5f9bc6def7ea8698a6ce45d8e12e1d1bd8cce876" , features = [ "defmt", "time-driver-any", "stm32g431cb", "memory-x", "unstable-pac", "exti"] }
+embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "5f9bc6def7ea8698a6ce45d8e12e1d1bd8cce876", features = [
+        "defmt",
+        "time-driver-any",
+        "stm32g431cb",
+        "memory-x",
+        "unstable-pac",
+        "exti",
+] }
 embassy-executor = { version = "0.5.0", git = "https://github.com/embassy-rs/embassy.git", rev = "5f9bc6def7ea8698a6ce45d8e12e1d1bd8cce876", features = [
         "arch-cortex-m",
         "executor-thread",
         "executor-interrupt",
         "defmt",
         "integrated-timers",
-        "task-arena-size-8192"] }
-embassy-time = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "5f9bc6def7ea8698a6ce45d8e12e1d1bd8cce876", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+        "task-arena-size-8192",
+] }
+embassy-time = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "5f9bc6def7ea8698a6ce45d8e12e1d1bd8cce876", features = [
+        "defmt",
+        "defmt-timestamp-uptime",
+        "tick-hz-32_768",
+] }
 
 defmt = "0.3"
 defmt-rtt = "0.4.0"
