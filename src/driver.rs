@@ -219,16 +219,6 @@ where
         Ok(())
     }
 
-    /// Update the screen with the provided buffer using a full refresh.
-    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
-        self.write_red_buffer(buffer)?;
-        self.write_bw_buffer(buffer)?;
-        self.refresh()?;
-        self.write_red_buffer(buffer)?;
-        self.write_bw_buffer(buffer)?;
-        Ok(())
-    }
-
     fn use_full_frame(&mut self) -> Result<()> {
         self.use_partial_frame(0, 0, u32::from(D::WIDTH), u32::from(D::HEIGHT))?;
         Ok(())
@@ -333,6 +323,16 @@ where
         self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::UNDOCUMENTED])?;
         self.command(command::MASTER_ACTIVATE)?;
         self.wait_until_idle();
+        Ok(())
+    }
+
+    /// Update the screen with the provided buffer using a full refresh.
+    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
+        self.refresh()?;
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
         Ok(())
     }
 
