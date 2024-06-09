@@ -24,7 +24,7 @@ use profont::PROFONT_24_POINT;
 use weact_studio_epd::{
     color::Color,
     graphics::{buffer_len, Display, Display290Bw, DisplayRotation, DisplayTrait},
-    Driver,
+    WeActStudio290BlackWhiteDriver,
 };
 
 #[embassy_executor::main]
@@ -44,7 +44,7 @@ async fn main(_spawner: Spawner) {
     let spi_device = ExclusiveDevice::new(spi_bus, cs, Delay);
     let spi_interface = SPIInterface::new(spi_device, dc);
 
-    let mut driver: Driver<128, 296, _, _, _, _> = Driver::new(spi_interface, busy, res, Delay);
+    let mut driver = WeActStudio290BlackWhiteDriver::new(spi_interface, busy, res, Delay);
 
     let mut display = Display290Bw::bw();
     display.set_rotation(DisplayRotation::Rotate90);

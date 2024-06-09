@@ -12,8 +12,12 @@ mod flag;
 pub mod graphics;
 mod lut;
 
-/// Display driver
-pub use driver::Driver;
+pub use driver::DisplayDriver;
+
+pub use driver::WeActStudio213BlackWhiteDriver;
+pub use driver::WeActStudio213TriColorDriver;
+pub use driver::WeActStudio290BlackWhiteDriver;
+pub use driver::WeActStudio290TriColorDriver;
 
 /// Alias for `Result<T, DisplayError>`.
 pub type Result<T> = core::result::Result<T, display_interface::DisplayError>;
