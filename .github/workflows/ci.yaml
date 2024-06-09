@@ -28,3 +28,14 @@ jobs:
           components: rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
+
+  examples:
+    name: Build examples
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [rp2040_2_9_inch_bw, stm32g431_2_9_bw]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cd examples/${{ matrix.example }} && cargo build --release
