@@ -11,7 +11,13 @@ use crate::{color, command, flag, lut, Result};
 
 #[sealed]
 pub trait Driver {
+    /// Display width. This can be more than the visible width of the display.
     const WIDTH: u16;
+
+    /// Visible display width.
+    const VISIBLE_WIDTH: u16 = Self::WIDTH;
+
+    /// Display height.
     const HEIGHT: u16;
 }
 #[sealed]
@@ -49,7 +55,8 @@ pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
 pub struct WeActStudio213BlackWhite;
 #[sealed]
 impl Driver for WeActStudio213BlackWhite {
-    const WIDTH: u16 = 122;
+    const WIDTH: u16 = 128;
+    const VISIBLE_WIDTH: u16 = 122;
     const HEIGHT: u16 = 250;
 }
 #[sealed]
@@ -61,7 +68,8 @@ pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
 pub struct WeActStudio213TriColor;
 #[sealed]
 impl Driver for WeActStudio213TriColor {
-    const WIDTH: u16 = 122;
+    const WIDTH: u16 = 128;
+    const VISIBLE_WIDTH: u16 = 122;
     const HEIGHT: u16 = 250;
 }
 #[sealed]
@@ -69,7 +77,7 @@ impl TriColorDriver for WeActStudio213TriColor {}
 
 /// The main driver struct that manages the communication with the display.
 ///
-/// You probbaly want to use one of the display specific type aliases instead.
+/// You probably want to use one of the display-specific type aliases instead.
 pub struct DisplayDriver<DI, BSY, RST, DELAY, D> {
     _marker: core::marker::PhantomData<D>,
     interface: DI,
@@ -145,14 +153,16 @@ where
 
     /// Write to the red buffer.
     ///
-    /// This buffer is also used for quick refreshes on B/W displays.
+    /// On B/W displays this buffer is used for quick refreshes.
     pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
         Ok(())
     }
 
-    /// Write to the B/W buffer at the given position. `x`, `y`, `width`, and `height` must be multiples of 8.
+    /// Write to the B/W buffer at the given position.
+    ///
+    /// `x`, and `width` must be multiples of 8.
     pub fn write_partial_bw_buffer(
         &mut self,
         buffer: &[u8],
@@ -166,9 +176,11 @@ where
         Ok(())
     }
 
-    /// Write to the red buffer at the given position. `x`, `y`, `width`, and `height` must be multiples of 8.
+    /// Write to the red buffer at the given position.
     ///
-    /// This buffer is also used for quick refreshes on B/W displays.
+    /// `x`, and `width` must be multiples of 8.
+    ///
+    /// On B/W displays this buffer is used for quick refreshes.
     pub fn write_partial_red_buffer(
         &mut self,
         buffer: &[u8],
@@ -196,7 +208,7 @@ where
 
     /// Make the whole red frame on the display driver white.
     ///
-    /// This buffer is also used for quick refreshes on B/W displays.
+    /// On B/W displays this buffer is used for quick refreshes.
     pub fn clear_red_buffer(&mut self) -> Result<()> {
         self.use_full_frame()?;
 
@@ -268,7 +280,7 @@ where
         Ok(())
     }
 
-    /// Function for sending an array of u8-values of data over spi.
+    /// Send an array of bytes to the display.
     fn data(&mut self, data: &[u8]) -> Result<()> {
         self.interface.send_data(DataFormat::U8(data))?;
         self.wait_until_idle();
@@ -282,14 +294,14 @@ where
         }
     }
 
-    /// Function for sending a command and the data belonging to it.
+    /// Sending a command and the data belonging to it.
     fn command_with_data(&mut self, command: u8, data: &[u8]) -> Result<()> {
         self.command(command)?;
         self.data(data)?;
         Ok(())
     }
 
-    /// Function to send a byte to the display mutiple times.
+    /// Send a byte to the display mutiple times.
     fn data_x_times(&mut self, data: u8, repetitions: u32) -> Result<()> {
         let mut iter = iter::repeat(data).take(repetitions as usize);
         self.interface.send_data(DataFormat::U8Iter(&mut iter))?;
@@ -346,6 +358,8 @@ where
     }
 
     /// Update the screen with the provided buffer at the given position using a partial refresh.
+    ///
+    /// `x`, and `width` must be multiples of 8.
     pub fn quick_partial_update(
         &mut self,
         buffer: &[u8],
