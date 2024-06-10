@@ -9,7 +9,9 @@ use sealed::sealed;
 
 use crate::{
     color::{self, ColorType},
-    command, flag, lut, Result,
+    command, flag,
+    graphics::Display,
+    lut, Result,
 };
 
 #[sealed]
@@ -342,7 +344,7 @@ where
     }
 
     /// Update the screen with the provided buffer using a full refresh.
-    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
+    pub fn update_bw(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
         self.refresh()?;
@@ -377,6 +379,32 @@ where
         self.write_partial_bw_buffer(buffer, x, y, width, height)?;
         Ok(())
     }
+
+    /// Update the screen with the provided [`Display`] using a full refresh.
+    #[cfg(feature = "graphics")]
+    pub fn update_bw_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+        &mut self,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+    ) -> Result<()> {
+        self.update_bw(display.buffer())
+    }
+
+    /// Update the screen with the provided [`Display`] at the given position using a partial refresh.
+    ///
+    /// `x` must be multiples of 8.
+    #[cfg(feature = "graphics")]
+    pub fn quick_partial_update_display<
+        const WIDTH: u32,
+        const HEIGHT: u32,
+        const BUFFER_SIZE: usize,
+    >(
+        &mut self,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+        x: u32,
+        y: u32,
+    ) -> Result<()> {
+        self.quick_partial_update(display.buffer(), x, y, WIDTH, HEIGHT)
+    }
 }
 
 // Functions avialable only for Tricolor displays
@@ -388,5 +416,20 @@ where
     DELAY: DelayNs,
     D: TriColorDriver,
 {
-    // TODO: Add Tricolor support
+    /// Update the screen with the provided buffers using a full refresh.
+    pub fn update_3c(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
+        self.write_red_buffer(red_buffer)?;
+        self.write_bw_buffer(bw_buffer)?;
+        self.refresh()?;
+        Ok(())
+    }
+
+    /// Update the screen with the provided [`Display`] using a full refresh.
+    #[cfg(feature = "graphics")]
+    pub fn update_3c_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+        &mut self,
+        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
+    ) -> Result<()> {
+        self.update_3c(display.bw_buffer(), display.red_buffer())
+    }
 }

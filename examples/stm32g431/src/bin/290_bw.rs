@@ -84,7 +84,7 @@ async fn main(_spawner: Spawner) {
         .unwrap();
     string_buf.clear();
 
-    driver.update(display.buffer()).unwrap();
+    driver.update_bw_display(&display).unwrap();
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {

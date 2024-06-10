@@ -76,6 +76,11 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         }
     }
 
+    /// Get the internal buffer.
+    pub fn buffer(&self) -> &[u8] {
+        &self.buffer
+    }
+
     /// Clear the display buffer with the default color.
     pub fn clear_buffer(&mut self) {
         self.buffer.fill(self.background_color.byte_value().0);
@@ -101,6 +106,16 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         }
     }
 
+    /// Get the internal B/W buffer.
+    pub fn bw_buffer(&self) -> &[u8] {
+        &self.buffer[..(BUFFER_SIZE / 2)]
+    }
+
+    /// Get the internal red buffer.
+    pub fn red_buffer(&self) -> &[u8] {
+        &self.buffer[(BUFFER_SIZE / 2)..]
+    }
+
     /// Clear the display buffer with the default color.
     pub fn clear_buffer(&mut self) {
         self.buffer[..(BUFFER_SIZE / 2)].fill(self.background_color.byte_value().0);
@@ -113,10 +128,10 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, COLOR>
 where
     COLOR: ColorType + PixelColor,
 {
-    /// Get the internal buffer.
-    pub fn buffer(&self) -> &[u8] {
-        &self.buffer
-    }
+    // /// Get the internal buffer.
+    // pub fn buffer(&self) -> &[u8] {
+    //     &self.buffer
+    // }
 
     /// Get the current rotation of the display.
     pub fn rotation(&self) -> DisplayRotation {
