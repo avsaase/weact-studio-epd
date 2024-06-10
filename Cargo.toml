@@ -13,4 +13,5 @@ sealed = "0.5.0"
 
 [features]
 default = ["graphics"]
+# Enable `embedded-graphics` support
 graphics = ["dep:embedded-graphics"]

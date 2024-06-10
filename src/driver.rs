@@ -7,7 +7,10 @@ use embedded_hal::{
 };
 use sealed::sealed;
 
-use crate::{color, command, flag, lut, Result};
+use crate::{
+    color::{self, ColorType},
+    command, flag, lut, Result,
+};
 
 #[sealed]
 pub trait Driver {
@@ -199,7 +202,7 @@ where
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
-        let color = color::Color::White.get_byte_value();
+        let color = color::Color::White.byte_value().0;
 
         self.command(command::WRITE_BW_DATA)?;
         self.data_x_times(color, u32::from(D::WIDTH) / 8 * u32::from(D::HEIGHT))?;
@@ -213,7 +216,7 @@ where
         self.use_full_frame()?;
 
         // TODO: allow non-white background color
-        let color = color::Color::White.get_byte_value();
+        let color = color::Color::White.byte_value().1;
 
         self.command(command::WRITE_RED_DATA)?;
         self.data_x_times(color, u32::from(D::WIDTH) / 8 * u32::from(D::HEIGHT))?;

@@ -3,15 +3,16 @@
 #![warn(missing_docs)]
 
 /// Color definitions
-pub mod color;
+mod color;
 mod command;
 mod driver;
 mod flag;
 #[cfg(feature = "graphics")]
-/// Graphics utilities
+/// `embedded-graphics` support.
 pub mod graphics;
 mod lut;
 
+pub use color::{Color, TriColor};
 pub use driver::DisplayDriver;
 
 pub use driver::WeActStudio213BlackWhiteDriver;
