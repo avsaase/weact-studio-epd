@@ -21,11 +21,10 @@ use embedded_hal_bus::spi::ExclusiveDevice;
 use heapless::String;
 use panic_probe as _;
 use profont::PROFONT_24_POINT;
-use weact_studio_epd::graphics::Display290BlackWhite;
+use weact_studio_epd::graphics::{Display290BlackWhite, DisplayBlackWhite};
 use weact_studio_epd::{
-    color::Color,
-    graphics::{buffer_len, Display, Display290Bw, DisplayRotation, DisplayTrait},
-    WeActStudio290BlackWhiteDriver,
+    graphics::{buffer_len, DisplayRotation},
+    Color, WeActStudio290BlackWhiteDriver,
 };
 
 #[embassy_executor::main]
@@ -69,7 +68,8 @@ async fn main(_spawner: Spawner) {
     let mut display = Display290BlackWhite::new();
     display.set_rotation(DisplayRotation::Rotate90);
 
-    let mut partial_display_bw: Display<64, 128, { buffer_len(64, 128) }> = Display::bw();
+    let mut partial_display_bw =
+        DisplayBlackWhite::<64, 128, { buffer_len::<Color>(64, 128) }>::new();
     partial_display_bw.set_rotation(DisplayRotation::Rotate90);
 
     let mut now = Instant::now();
