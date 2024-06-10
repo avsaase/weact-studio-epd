@@ -381,6 +381,7 @@ where
     }
 
     /// Update the screen with the provided [`Display`] using a full refresh.
+    #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
     pub fn update_bw_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
         &mut self,
@@ -392,6 +393,7 @@ where
     /// Update the screen with the provided [`Display`] at the given position using a partial refresh.
     ///
     /// `x` must be multiples of 8.
+    #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
     pub fn quick_partial_update_display<
         const WIDTH: u32,
@@ -425,6 +427,7 @@ where
     }
 
     /// Update the screen with the provided [`Display`] using a full refresh.
+    #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
     pub fn update_3c_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
         &mut self,
