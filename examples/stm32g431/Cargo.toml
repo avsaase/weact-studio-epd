@@ -1,5 +1,5 @@
 [package]
-name = "stm32g431_2_9_inch_bw"
+name = "stm32g431_examples"
 version = "0.1.0"
 edition = "2021"
 

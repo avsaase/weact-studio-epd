@@ -1,5 +1,5 @@
 [package]
-name = "rp2040_2_9_inch_bw"
+name = "rp2040_examples"
 version = "0.1.0"
 edition = "2021"
 
