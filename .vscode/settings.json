@@ -1,7 +1,7 @@
 {
     "rust-analyzer.check.allTargets": false,
     "rust-analyzer.linkedProjects": [
-        "./examples/rp2040_2_9_inch_bw/Cargo.toml",
-        "./examples/stm32g431_2_9_inch_bw/Cargo.toml"
+        "./examples/rp2040/Cargo.toml",
+        "./examples/stm32g431/Cargo.toml"
     ]
 }

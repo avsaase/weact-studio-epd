@@ -36,8 +36,8 @@ jobs:
       fail-fast: false
       matrix:
         example: [
-          { folder: rp2040_2_9_inch_bw, target: thumbv6m-none-eabi }, 
-          { folder: stm32g431_2_9_inch_bw, target: thumbv7em-none-eabi }
+          { folder: rp2040, target: thumbv6m-none-eabi }, 
+          { folder: stm32g431, target: thumbv7em-none-eabi }
         ]
     steps:
       - uses: actions/checkout@v4
