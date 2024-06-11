@@ -39,7 +39,7 @@ async fn main(_spawner: Spawner) {
 
     let mut spi_config = Config::default();
     spi_config.frequency = 1_000_000;
-    let spi_bus = Spi::new_blocking_txonly(p.SPI0, scl, sda, spi_config);
+    let spi_bus = Spi::new_txonly(p.SPI0, scl, sda, p.DMA_CH0, spi_config);
     let spi_device = ExclusiveDevice::new(spi_bus, cs, Delay);
     let spi_interface = SPIInterface::new(spi_device, dc);
 
@@ -53,7 +53,7 @@ async fn main(_spawner: Spawner) {
     partial_display_bw.set_rotation(DisplayRotation::Rotate90);
 
     let mut now = Instant::now();
-    driver.init().unwrap();
+    driver.init().await.unwrap();
 
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
 
@@ -64,7 +64,7 @@ async fn main(_spawner: Spawner) {
         .unwrap();
     string_buf.clear();
 
-    driver.full_update(&display).unwrap();
+    driver.full_update(&display).await.unwrap();
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {
@@ -83,6 +83,7 @@ async fn main(_spawner: Spawner) {
 
         driver
             .fast_partial_update(&partial_display_bw, 56, 156)
+            .await
             .unwrap();
 
         partial_display_bw.clear(Color::White);

@@ -31,7 +31,7 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 cortex-m = { version = "0.7.6", features = ["inline-asm"] }
 cortex-m-rt = "0.7.0"
 
-embedded-hal-bus = "0.1.0"
+embedded-hal-bus = { version = "0.1.0", features = ["async"] }
 embedded-graphics = "0.8.1"
 display-interface-spi = "0.5.0"
 display-interface = "0.5.0"
