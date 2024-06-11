@@ -11,7 +11,7 @@ use crate::{
     color::{self, ColorType},
     command, flag,
     graphics::Display,
-    lut, Result, TriColor,
+    lut, Color, Result, TriColor,
 };
 
 #[sealed]
@@ -24,73 +24,41 @@ pub trait Driver {
 
     /// Display height.
     const HEIGHT: u16;
-
-    type Color: ColorType;
 }
-#[sealed]
-pub trait BlackWhiteDriver: Driver<Color = color::Color> {}
-#[sealed]
-pub trait TriColorDriver: Driver<Color = color::TriColor> {}
 
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290BlackWhite>;
-pub struct WeActStudio290BlackWhite;
-#[sealed]
-impl Driver for WeActStudio290BlackWhite {
-    const WIDTH: u16 = 128;
-    const HEIGHT: u16 = 296;
-    type Color = color::Color;
-}
-#[sealed]
-impl BlackWhiteDriver for WeActStudio290BlackWhite {}
-
+    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290, Color>;
 /// Display driver for the WeAct Studio 2.9 inch Tri-Color display.
 pub type WeActStudio290TriColorDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290TriColor>;
-pub struct WeActStudio290TriColor;
+    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290, TriColor>;
+pub struct WeActStudio290;
 #[sealed]
-impl Driver for WeActStudio290TriColor {
+impl Driver for WeActStudio290 {
     const WIDTH: u16 = 128;
     const HEIGHT: u16 = 296;
-    type Color = color::TriColor;
 }
-#[sealed]
-impl TriColorDriver for WeActStudio290TriColor {}
 
 /// Display driver for the WeAct Studio 2.13 inch B/W display.
 pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213BlackWhite>;
-pub struct WeActStudio213BlackWhite;
-#[sealed]
-impl Driver for WeActStudio213BlackWhite {
-    const WIDTH: u16 = 128;
-    const VISIBLE_WIDTH: u16 = 122;
-    const HEIGHT: u16 = 250;
-    type Color = color::Color;
-}
-#[sealed]
-impl BlackWhiteDriver for WeActStudio213BlackWhite {}
-
+    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213, Color>;
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213TriColor>;
-pub struct WeActStudio213TriColor;
+    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213, TriColor>;
+pub struct WeActStudio213;
 #[sealed]
-impl Driver for WeActStudio213TriColor {
+impl Driver for WeActStudio213 {
     const WIDTH: u16 = 128;
     const VISIBLE_WIDTH: u16 = 122;
     const HEIGHT: u16 = 250;
-    type Color = color::TriColor;
 }
-#[sealed]
-impl TriColorDriver for WeActStudio213TriColor {}
 
 /// The main driver struct that manages the communication with the display.
 ///
 /// You probably want to use one of the display-specific type aliases instead.
-pub struct DisplayDriver<DI, BSY, RST, DELAY, D> {
-    _marker: core::marker::PhantomData<D>,
+pub struct DisplayDriver<DI, BSY, RST, DELAY, D, C> {
+    _driver: core::marker::PhantomData<D>,
+    _color: core::marker::PhantomData<C>,
     interface: DI,
     busy: BSY,
     reset: RST,
@@ -100,7 +68,7 @@ pub struct DisplayDriver<DI, BSY, RST, DELAY, D> {
     initial_full_refresh_done: bool,
 }
 
-impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D>
+impl<DI, BSY, RST, DELAY, D, C> DisplayDriver<DI, BSY, RST, DELAY, D, C>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
@@ -115,7 +83,8 @@ where
     /// Use [`Self::init`] to initialize the display.
     pub fn new(interface: DI, busy: BSY, reset: RST, delay: DELAY) -> Self {
         Self {
-            _marker: core::marker::PhantomData,
+            _driver: core::marker::PhantomData,
+            _color: core::marker::PhantomData,
             interface,
             busy,
             reset,
@@ -321,13 +290,13 @@ where
 }
 
 // Functions avialable only for B/W displays
-impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D>
+impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D, Color>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: BlackWhiteDriver,
+    D: Driver,
 {
     /// Start a quick refresh of the display.
     ///
@@ -416,13 +385,13 @@ where
 }
 
 // Functions avialable only for Tricolor displays
-impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D>
+impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D, TriColor>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: TriColorDriver + Driver<Color = TriColor>,
+    D: Driver,
 {
     /// Update the screen with the provided buffers using a full refresh.
     pub fn update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {

@@ -157,6 +157,7 @@ where
         let index = index as usize;
         let (bw_bit, red_bit) = color.bit_value();
 
+        #[allow(clippy::collapsible_else_if)]
         if COLOR::BUFFER_COUNT == 2 {
             if red_bit == 1 {
                 // Red buffer takes precendence over B/W buffer so no need to update B/W buffer.
