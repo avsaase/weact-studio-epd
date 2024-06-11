@@ -339,9 +339,9 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
         self.update(display.buffer())
     }
@@ -381,9 +381,9 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const BUFFER_SIZE: usize>(
         &mut self,
-        display: Display<W, H, BUFFER_SIZE, crate::color::TriColor>,
+        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
         self.update(display.bw_buffer(), display.red_buffer())
     }
