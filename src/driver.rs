@@ -114,7 +114,7 @@ where
 
     /// Write to the red buffer.
     ///
-    /// On B/W displays this buffer is used for quick refreshes.
+    /// On B/W displays this buffer is used for fast refreshes.
     pub fn write_red_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.use_full_frame()?;
         self.command_with_data(command::WRITE_RED_DATA, buffer)?;
@@ -141,7 +141,7 @@ where
     ///
     /// `x`, and `width` must be multiples of 8.
     ///
-    /// On B/W displays this buffer is used for quick refreshes.
+    /// On B/W displays this buffer is used for fast refreshes.
     pub fn write_partial_red_buffer(
         &mut self,
         buffer: &[u8],
@@ -169,7 +169,7 @@ where
 
     /// Make the whole red frame on the display driver white.
     ///
-    /// On B/W displays this buffer is used for quick refreshes.
+    /// On B/W displays this buffer is used for fast refreshes.
     pub fn clear_red_buffer(&mut self) -> Result<()> {
         self.use_full_frame()?;
 
@@ -182,7 +182,7 @@ where
     }
 
     /// Start a full refresh of the display.
-    pub fn refresh(&mut self) -> Result<()> {
+    pub fn full_refresh(&mut self) -> Result<()> {
         self.initial_full_refresh_done = true;
         self.using_partial_mode = false;
 
@@ -279,14 +279,14 @@ where
     RST: OutputPin,
     DELAY: DelayNs,
 {
-    /// Start a quick refresh of the display.
+    /// Start a fast refresh of the display using the current in-screen buffers.
     ///
-    /// If the display hasn't done a full refresh yet, it will do that first.
-    pub fn quick_refresh(&mut self) -> Result<()> {
+    /// If the display hasn't done a [`Self::full_refresh`] yet, it will do that first.
+    pub fn fast_refresh(&mut self) -> Result<()> {
         if !self.initial_full_refresh_done {
             // There a bug here which causes the new image to overwrite the existing image which then
             // fades out over several updates.
-            self.refresh()?;
+            self.full_refresh()?;
         }
 
         if !self.using_partial_mode {
@@ -299,29 +299,29 @@ where
         Ok(())
     }
 
-    /// Update the screen with the provided buffer using a full refresh.
-    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
+    /// Update the screen with the provided full frame buffer using a full refresh.
+    pub fn full_update(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
-        self.refresh()?;
-        self.write_red_buffer(buffer)?;
-        self.write_bw_buffer(buffer)?;
-        Ok(())
-    }
-
-    /// Update the screen with the provided buffer using a quick refresh.
-    pub fn quick_update(&mut self, buffer: &[u8]) -> Result<()> {
-        self.write_red_buffer(buffer)?;
-        self.quick_refresh()?;
+        self.full_refresh()?;
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
         Ok(())
     }
 
-    /// Update the screen with the provided buffer at the given position using a partial refresh.
+    /// Update the screen with the provided full frame buffer using a fast refresh.
+    pub fn fast_update(&mut self, buffer: &[u8]) -> Result<()> {
+        self.write_red_buffer(buffer)?;
+        self.fast_refresh()?;
+        self.write_red_buffer(buffer)?;
+        self.write_bw_buffer(buffer)?;
+        Ok(())
+    }
+
+    /// Update the screen with the provided partial frame buffer at the given position using a fast refresh.
     ///
     /// `x`, and `width` must be multiples of 8.
-    pub fn quick_partial_update(
+    pub fn fast_partial_update(
         &mut self,
         buffer: &[u8],
         x: u32,
@@ -330,7 +330,7 @@ where
         height: u32,
     ) -> Result<()> {
         self.write_partial_bw_buffer(buffer, x, y, width, height)?;
-        self.quick_refresh()?;
+        self.fast_refresh()?;
         self.write_partial_red_buffer(buffer, x, y, width, height)?;
         self.write_partial_bw_buffer(buffer, x, y, width, height)?;
         Ok(())
@@ -339,19 +339,29 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_from_display<const BUFFER_SIZE: usize>(
+    pub fn full_update_from_display<const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
-        self.update(display.buffer())
+        self.full_update(display.buffer())
     }
 
-    /// Update the screen with the provided [`Display`] at the given position using a partial refresh.
+    /// Update the screen with the provided [`Display`] using a fast refresh.
+    #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+    #[cfg(feature = "graphics")]
+    pub fn fast_update_from_display<const BUFFER_SIZE: usize>(
+        &mut self,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+    ) -> Result<()> {
+        self.fast_update(display.buffer())
+    }
+
+    /// Update the screen with the provided partial [`Display`] at the given position using a fast refresh.
     ///
     /// `x` and the display width `W` must be multiples of 8.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn quick_partial_update_from_display<
+    pub fn fast_partial_update_from_display<
         const W: u32,
         const H: u32,
         const BUFFER_SIZE: usize,
@@ -361,7 +371,7 @@ where
         x: u32,
         y: u32,
     ) -> Result<()> {
-        self.quick_partial_update(display.buffer(), x, y, W, H)
+        self.fast_partial_update(display.buffer(), x, y, W, H)
     }
 }
 
@@ -374,21 +384,23 @@ where
     RST: OutputPin,
     DELAY: DelayNs,
 {
-    /// Update the screen with the provided buffers using a full refresh.
-    pub fn update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
+    /// Update the screen with the provided full frame buffers using a full refresh.
+    pub fn full_update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(red_buffer)?;
         self.write_bw_buffer(bw_buffer)?;
-        self.refresh()?;
+        self.full_refresh()?;
         Ok(())
     }
 
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_from_display<const BUFFER_SIZE: usize>(
+    pub fn full_update_from_display<const BUFFER_SIZE: usize>(
         &mut self,
         display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
-        self.update(display.bw_buffer(), display.red_buffer())
+        self.full_update(display.bw_buffer(), display.red_buffer())
     }
+
+    // TODO: check if partial updates
 }

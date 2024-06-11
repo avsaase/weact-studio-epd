@@ -64,7 +64,7 @@ async fn main(_spawner: Spawner) {
         .unwrap();
     string_buf.clear();
 
-    driver.update_from_display(&display).unwrap();
+    driver.full_update_from_display(&display).unwrap();
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {
@@ -82,7 +82,7 @@ async fn main(_spawner: Spawner) {
         string_buf.clear();
 
         driver
-            .quick_partial_update_from_display(&partial_display_bw, 56, 156)
+            .fast_partial_update_from_display(&partial_display_bw, 56, 156)
             .unwrap();
 
         partial_display_bw.clear(Color::White);
