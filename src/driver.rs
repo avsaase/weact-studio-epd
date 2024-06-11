@@ -11,7 +11,7 @@ use crate::{
     color::{self, ColorType},
     command, flag,
     graphics::Display,
-    lut, Result,
+    lut, Result, TriColor,
 };
 
 #[sealed]
@@ -24,11 +24,13 @@ pub trait Driver {
 
     /// Display height.
     const HEIGHT: u16;
+
+    type Color: ColorType;
 }
 #[sealed]
-pub trait BlackWhiteDriver: Driver {}
+pub trait BlackWhiteDriver: Driver<Color = color::Color> {}
 #[sealed]
-pub trait TriColorDriver: Driver {}
+pub trait TriColorDriver: Driver<Color = color::TriColor> {}
 
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
@@ -38,6 +40,7 @@ pub struct WeActStudio290BlackWhite;
 impl Driver for WeActStudio290BlackWhite {
     const WIDTH: u16 = 128;
     const HEIGHT: u16 = 296;
+    type Color = color::Color;
 }
 #[sealed]
 impl BlackWhiteDriver for WeActStudio290BlackWhite {}
@@ -50,6 +53,7 @@ pub struct WeActStudio290TriColor;
 impl Driver for WeActStudio290TriColor {
     const WIDTH: u16 = 128;
     const HEIGHT: u16 = 296;
+    type Color = color::TriColor;
 }
 #[sealed]
 impl TriColorDriver for WeActStudio290TriColor {}
@@ -63,6 +67,7 @@ impl Driver for WeActStudio213BlackWhite {
     const WIDTH: u16 = 128;
     const VISIBLE_WIDTH: u16 = 122;
     const HEIGHT: u16 = 250;
+    type Color = color::Color;
 }
 #[sealed]
 impl BlackWhiteDriver for WeActStudio213BlackWhite {}
@@ -76,6 +81,7 @@ impl Driver for WeActStudio213TriColor {
     const WIDTH: u16 = 128;
     const VISIBLE_WIDTH: u16 = 122;
     const HEIGHT: u16 = 250;
+    type Color = color::TriColor;
 }
 #[sealed]
 impl TriColorDriver for WeActStudio213TriColor {}
@@ -344,7 +350,7 @@ where
     }
 
     /// Update the screen with the provided buffer using a full refresh.
-    pub fn update_bw(&mut self, buffer: &[u8]) -> Result<()> {
+    pub fn update(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
         self.refresh()?;
@@ -383,11 +389,11 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_bw_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
-        self.update_bw(display.buffer())
+        self.update(display.buffer())
     }
 
     /// Update the screen with the provided [`Display`] at the given position using a partial refresh.
@@ -416,10 +422,10 @@ where
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: TriColorDriver,
+    D: TriColorDriver + Driver<Color = TriColor>,
 {
     /// Update the screen with the provided buffers using a full refresh.
-    pub fn update_3c(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
+    pub fn update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(red_buffer)?;
         self.write_bw_buffer(bw_buffer)?;
         self.refresh()?;
@@ -429,10 +435,10 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_3c_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
         &mut self,
         display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
-        self.update_3c(display.bw_buffer(), display.red_buffer())
+        self.update(display.bw_buffer(), display.red_buffer())
     }
 }
