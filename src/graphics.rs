@@ -46,19 +46,23 @@ pub type Display290BlackWhite = Display<128, 296, { buffer_len::<Color>(128, 296
 /// Display buffer for the WeAct Studio 2.9 inch tri-color display.
 pub type Display290TriColor = Display<128, 296, { buffer_len::<TriColor>(128, 296) }, TriColor>;
 /// Display buffer for the WeAct Studio 2.13 inch B/W display.
+///
+/// The screen uses a 128 pixel wide buffer but only 122 pixels are visible.
 pub type Display213BlackWhite = Display<128, 250, { buffer_len::<Color>(128, 250) }, Color>;
 /// Display buffer for the WeAct Studio 2.13 inch tri-color display.
+///
+/// The screen uses a 128 pixel wide buffer but only 122 pixels are visible.
 pub type Display213TriColor = Display<128, 250, { buffer_len::<TriColor>(128, 250) }, TriColor>;
 
 /// Generically-sized B/W display buffer.
 ///
-/// `BUFFER_SIZE` can be calculated using [`buffer_len`].
+/// `WIDTH` must be a multiple of 8. `BUFFER_SIZE` can be calculated using [`buffer_len`].
 pub type DisplayBlackWhite<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
     Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>;
 
 /// Generically-sized tri-color display buffer.
 ///
-/// `BUFFER_SIZE` can be calculated using [`buffer_len`].
+/// `WIDTH` must be a multiple of 8. `BUFFER_SIZE` can be calculated using [`buffer_len`].
 pub type DisplayTriColor<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
     Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>;
 
