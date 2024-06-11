@@ -85,6 +85,14 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     }
 }
 
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> Default
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
 {
@@ -117,6 +125,14 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     pub fn clear(&mut self, color: TriColor) {
         self.buffer[..(BUFFER_SIZE / 2)].fill(color.byte_value().0);
         self.buffer[(BUFFER_SIZE / 2)..].fill(color.byte_value().1);
+    }
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> Default
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -163,7 +163,7 @@ where
         let color = color::Color::White.byte_value().0;
 
         self.command(command::WRITE_BW_DATA)?;
-        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
+        self.data_x_times(color, WIDTH / 8 * HEIGHT)?;
         Ok(())
     }
 
@@ -177,7 +177,7 @@ where
         let color = color::Color::White.byte_value().1;
 
         self.command(command::WRITE_RED_DATA)?;
-        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
+        self.data_x_times(color, WIDTH / 8 * HEIGHT)?;
         Ok(())
     }
 
@@ -193,7 +193,7 @@ where
     }
 
     fn use_full_frame(&mut self) -> Result<()> {
-        self.use_partial_frame(0, 0, u32::from(WIDTH), u32::from(HEIGHT))?;
+        self.use_partial_frame(0, 0, WIDTH, HEIGHT)?;
         Ok(())
     }
 
