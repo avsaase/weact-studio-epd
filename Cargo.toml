@@ -17,6 +17,7 @@ sealed = "0.5.0"
 default = ["graphics"]
 # Enable `embedded-graphics` support
 graphics = ["dep:embedded-graphics"]
+sync = []
 
 [package.metadata.docs.rs]
 all-features = true

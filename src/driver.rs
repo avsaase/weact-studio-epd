@@ -1,11 +1,17 @@
 use core::iter;
 
-use display_interface::{AsyncWriteOnlyDataCommand, DataFormat};
+#[cfg(not(feature = "sync"))]
+use display_interface::AsyncWriteOnlyDataCommand;
+#[cfg(feature = "sync")]
+use display_interface::WriteOnlyDataCommand;
+#[cfg(not(feature = "sync"))]
+use embedded_hal_async::digital::Wait;
+
+use display_interface::DataFormat;
 use embedded_hal::{
     delay::DelayNs,
     digital::{InputPin, OutputPin},
 };
-use embedded_hal_async::digital::Wait;
 
 use crate::{
     color::{self, ColorType},
@@ -30,6 +36,17 @@ pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
 /// The main driver struct that manages the communication with the display.
 ///
 /// You probably want to use one of the display-specific type aliases instead.
+#[maybe_async_cfg::maybe(
+    sync(
+        feature = "sync",
+        keep_self,
+        idents(
+            AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
+            Wait(sync = "InputPin")
+        )
+    ),
+    async(not(feature = "sync"), keep_self)
+)]
 pub struct DisplayDriver<
     DI,
     BSY,
@@ -50,6 +67,17 @@ pub struct DisplayDriver<
     initial_full_refresh_done: bool,
 }
 
+#[maybe_async_cfg::maybe(
+    sync(
+        feature = "sync",
+        keep_self,
+        idents(
+            AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
+            Wait(sync = "InputPin")
+        )
+    ),
+    async(not(feature = "sync"), keep_self)
+)]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32, C>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, C>
 where
@@ -274,9 +302,12 @@ where
 
     /// Waits until device isn't busy anymore (busy == HIGH).
     async fn wait_until_idle(&mut self) {
-        // while self.busy.is_high().unwrap_or(true) {
-        //     self.delay.delay_ms(1)
-        // }
+        #[cfg(feature = "sync")]
+        while self.busy.is_high().unwrap_or(true) {
+            self.delay.delay_ms(1)
+        }
+
+        #[cfg(not(feature = "sync"))]
         let _ = self.busy.wait_for_low().await;
     }
 
@@ -298,6 +329,17 @@ where
 }
 
 /// Functions available only for B/W displays
+#[maybe_async_cfg::maybe(
+    sync(
+        feature = "sync",
+        keep_self,
+        idents(
+            AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
+            Wait(sync = "InputPin")
+        )
+    ),
+    async(not(feature = "sync"), keep_self)
+)]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, Color>
 where
@@ -405,6 +447,17 @@ where
 }
 
 /// Functions available only for tri-color displays
+#[maybe_async_cfg::maybe(
+    sync(
+        feature = "sync",
+        keep_self,
+        idents(
+            AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
+            Wait(sync = "InputPin")
+        )
+    ),
+    async(not(feature = "sync"), keep_self)
+)]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, TriColor>
 where
