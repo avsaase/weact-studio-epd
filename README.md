@@ -2,6 +2,8 @@
 
 Unofficial Rust driver for WeAct Studio e-paper displays.
 
+The driver exposes both write access to the screen frame buffers and higher-level `embedded-graphics` support.
+
 ## Supported displays
 
 | Display | Colors | Supported | Partial update[^1] | Fast refresh[^2] | Tested |
@@ -11,7 +13,7 @@ Unofficial Rust driver for WeAct Studio e-paper displays.
 | WeAct 2.9 inch 128x296 B/W | Black, White | ✓ | ✓ | ✓ | ✓ |
 | WeAct 2.9 inch 128x2296 B/W | Black, White, Red | ✓ |  | ✕ |  |
 
-[^1]: Allows directly updating only part of the screen buffer.
+[^1]: Allows updating part of the screen buffer to save IO time and potentially memory.
 
 [^2]: Refresh the screen without flickering the screen a few times.
 
@@ -29,9 +31,6 @@ This driver is based on the following crates:
 
 - [`epd-waveshare`](https://crates.io/crates/epd-waveshare)
 - [`ssd1680`](https://crates.io/crates/ssd1680)
-
-I do not understand software licenses. If you are the author of one of the above crates and you think that
-this crate should be licensed under a different license, please let me know.
 
 ## License
 
