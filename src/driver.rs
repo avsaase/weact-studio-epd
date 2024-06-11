@@ -357,7 +357,7 @@ where
         x: u32,
         y: u32,
     ) -> Result<()> {
-        self.quick_partial_update(display.buffer(), x, y, WIDTH, HEIGHT)
+        self.quick_partial_update(display.buffer(), x, y, W, H)
     }
 }
 
