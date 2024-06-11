@@ -1,14 +1,15 @@
-use display_interface::DisplayError;
+use core::convert::Infallible;
+
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},
-    pixelcolor::{raw::RawU1, PixelColor},
+    pixelcolor::PixelColor,
     Pixel,
 };
 
-use crate::color::Color;
+use crate::color::{Color, ColorType, TriColor};
 
-/// Rotation of the display
+/// Rotation of the display.
 #[derive(Debug, Clone, Copy, Default)]
 pub enum DisplayRotation {
     /// No rotation.
@@ -24,128 +25,229 @@ pub enum DisplayRotation {
 
 /// Computes the needed buffer length. Takes care of rounding up in case `width`
 /// is not divisible by 8.
-pub const fn buffer_len(width: usize, height: usize) -> usize {
-    (width + 7) / 8 * height
+pub const fn buffer_len<C>(width: usize, height: usize) -> usize
+where
+    C: ColorType,
+{
+    (width + 7) / 8 * height * C::BUFFER_COUNT
 }
 
 /// In-memory display buffer to render to using `embedded-graphics`.
 ///
 /// `BUFFER_SIZE` can be calculated using [`buffer_len`].
-pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> {
+pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> {
     buffer: [u8; BUFFER_SIZE],
     rotation: DisplayRotation,
-    is_inverted: bool,
+    _color: core::marker::PhantomData<C>,
 }
 
 /// Display buffer for the WeAct Studio 2.9 inch B/W display.
-pub type Display290Bw = Display<128, 296, { buffer_len(128, 296) }>;
+pub type Display290BlackWhite = Display<128, 296, { buffer_len::<Color>(128, 296) }, Color>;
+/// Display buffer for the WeAct Studio 2.9 inch tri-color display.
+pub type Display290TriColor = Display<128, 296, { buffer_len::<TriColor>(128, 296) }, TriColor>;
+/// Display buffer for the WeAct Studio 2.13 inch B/W display.
+///
+/// The screen uses a 128 pixel wide buffer but only 122 pixels are visible.
+pub type Display213BlackWhite = Display<128, 250, { buffer_len::<Color>(128, 250) }, Color>;
+/// Display buffer for the WeAct Studio 2.13 inch tri-color display.
+///
+/// The screen uses a 128 pixel wide buffer but only 122 pixels are visible.
+pub type Display213TriColor = Display<128, 250, { buffer_len::<TriColor>(128, 250) }, TriColor>;
+
+/// Generically-sized B/W display buffer.
+///
+/// `WIDTH` must be a multiple of 8. `BUFFER_SIZE` can be calculated using [`buffer_len`].
+pub type DisplayBlackWhite<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>;
+
+/// Generically-sized tri-color display buffer.
+///
+/// `WIDTH` must be a multiple of 8. `BUFFER_SIZE` can be calculated using [`buffer_len`].
+pub type DisplayTriColor<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>;
 
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
-    Display<WIDTH, HEIGHT, BUFFER_SIZE>
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>
 {
-    /// Creates a new B/W display buffer.
-    pub fn bw() -> Self {
+    /// Creates a new display buffer filled with the default color.
+    pub fn new() -> Self {
         Self {
-            buffer: [Color::White.get_byte_value(); BUFFER_SIZE],
-            rotation: DisplayRotation::default(),
-            is_inverted: false,
+            buffer: [Color::default().byte_value().0; BUFFER_SIZE],
+            rotation: Default::default(),
+            _color: core::marker::PhantomData,
         }
+    }
+
+    /// Get the internal buffer.
+    pub fn buffer(&self) -> &[u8] {
+        &self.buffer
+    }
+
+    /// Clear the display buffer with the given color.
+    pub fn clear(&mut self, color: Color) {
+        self.buffer.fill(color.byte_value().0);
     }
 }
 
-/// `embedded-graphics` display utilities.
-pub trait DisplayTrait: DrawTarget {
-    /// Clears the buffer of the display with the chosen background color.
-    fn clear_buffer(&mut self, background_color: Color) {
-        let fill_color = if self.is_inverted() {
-            background_color.inverse()
-        } else {
-            background_color
-        };
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> Default
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-        for elem in self.buffer_mut().iter_mut() {
-            *elem = fill_color.get_byte_value();
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
+{
+    /// Creates a new display buffer filled with the default color.
+    pub fn new() -> Self {
+        let background_color = TriColor::default();
+
+        let mut buffer = [0; BUFFER_SIZE];
+        buffer[..(BUFFER_SIZE / 2)].fill(background_color.byte_value().0);
+        buffer[(BUFFER_SIZE / 2)..].fill(background_color.byte_value().1);
+
+        Self {
+            buffer,
+            rotation: Default::default(),
+            _color: core::marker::PhantomData,
         }
     }
 
-    /// Returns the buffer.
-    fn buffer(&self) -> &[u8];
+    /// Get the internal B/W buffer.
+    pub fn bw_buffer(&self) -> &[u8] {
+        &self.buffer[..(BUFFER_SIZE / 2)]
+    }
 
-    /// Returns a mutable buffer.
-    fn buffer_mut(&mut self) -> &mut [u8];
+    /// Get the internal red buffer.
+    pub fn red_buffer(&self) -> &[u8] {
+        &self.buffer[(BUFFER_SIZE / 2)..]
+    }
+
+    /// Clear the display buffer with the given color.
+    pub fn clear(&mut self, color: TriColor) {
+        self.buffer[..(BUFFER_SIZE / 2)].fill(color.byte_value().0);
+        self.buffer[(BUFFER_SIZE / 2)..].fill(color.byte_value().1);
+    }
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> Default
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C>
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
+where
+    C: ColorType + PixelColor,
+{
+    /// Get the current rotation of the display.
+    pub fn rotation(&self) -> DisplayRotation {
+        self.rotation
+    }
 
     /// Sets the rotation of the display.
-    fn set_rotation(&mut self, rotation: DisplayRotation);
+    pub fn set_rotation(&mut self, rotation: DisplayRotation) {
+        self.rotation = rotation;
+    }
 
-    /// Get the current rotation of the display.
-    fn rotation(&self) -> DisplayRotation;
-
-    /// If the color for this display is inverted.
-    fn is_inverted(&self) -> bool;
-
-    /// Helper function for the `embedded-graphics` `DrawTarget` trait.
-    fn draw_helper(
-        &mut self,
-        width: u32,
-        height: u32,
-        pixel: Pixel<Color>,
-    ) -> Result<(), Self::Error> {
-        let rotation = self.rotation();
-        let is_inverted = self.is_inverted();
-        let buffer = self.buffer_mut();
-
+    fn set_pixel(&mut self, pixel: Pixel<C>) {
+        // let rotation = self.rotation;
         let Pixel(point, color) = pixel;
-        if outside_display(point, width, height, rotation) {
-            return Ok(());
+        let Point { x, y } = point;
+
+        if outside_display(point, WIDTH, HEIGHT, self.rotation) {
+            return;
         }
 
-        let (index, bit) = find_position(point.x as u32, point.y as u32, width, height, rotation);
+        let (index, bit) =
+            pixel_position_in_buffer(x as u32, y as u32, WIDTH, HEIGHT, self.rotation);
         let index = index as usize;
+        let (bw_bit, red_bit) = color.bit_value();
 
-        // "Draw" the Pixel on that bit
-        match color {
-            Color::White => {
-                if is_inverted {
-                    buffer[index] &= !bit;
+        #[allow(clippy::collapsible_else_if)]
+        if C::BUFFER_COUNT == 2 {
+            if red_bit == 1 {
+                // Red buffer takes precendence over B/W buffer so no need to update B/W buffer.
+                self.buffer[index + BUFFER_SIZE / 2] |= bit;
+            } else {
+                if bw_bit == 1 {
+                    self.buffer[index] |= bit;
                 } else {
-                    buffer[index] |= bit;
+                    self.buffer[index] &= !bit;
                 }
+                self.buffer[index + BUFFER_SIZE / 2] &= !bit;
             }
-            Color::Black => {
-                if is_inverted {
-                    buffer[index] |= bit;
-                } else {
-                    buffer[index] &= !bit;
-                }
+        } else {
+            if bw_bit == 1 {
+                self.buffer[index] |= bit;
+            } else {
+                self.buffer[index] &= !bit;
             }
         }
-        Ok(())
     }
 }
 
 impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE>
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>
 {
     type Color = Color;
-    type Error = DisplayError;
+    type Error = Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for p in pixels.into_iter() {
-            self.draw_helper(WIDTH, HEIGHT, p)?;
+            self.set_pixel(p);
         }
+        Ok(())
+    }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.clear(color);
+        Ok(())
+    }
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
+{
+    type Color = TriColor;
+    type Error = Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for p in pixels.into_iter() {
+            self.set_pixel(p);
+        }
+        Ok(())
+    }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.clear(color);
         Ok(())
     }
 }
 
 impl PixelColor for Color {
-    type Raw = RawU1;
+    type Raw = ();
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> OriginDimensions
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE>
+impl PixelColor for TriColor {
+    type Raw = ();
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> OriginDimensions
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
+where
+    C: PixelColor + ColorType,
 {
     fn size(&self) -> Size {
         //if display is rotated 90 deg or 270 then swap height and width
@@ -156,75 +258,156 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> OriginDimens
     }
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DisplayTrait
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE>
-{
-    fn buffer(&self) -> &[u8] {
-        &self.buffer
-    }
-
-    fn buffer_mut(&mut self) -> &mut [u8] {
-        &mut self.buffer
-    }
-
-    fn set_rotation(&mut self, rotation: DisplayRotation) {
-        self.rotation = rotation;
-    }
-
-    fn rotation(&self) -> DisplayRotation {
-        self.rotation
-    }
-
-    fn is_inverted(&self) -> bool {
-        self.is_inverted
-    }
-}
-
 fn outside_display(p: Point, width: u32, height: u32, rotation: DisplayRotation) -> bool {
     if p.x < 0 || p.y < 0 {
         return true;
     }
     let (x, y) = (p.x as u32, p.y as u32);
     match rotation {
-        DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
-            if x >= width || y >= height {
-                return true;
-            }
-        }
-        DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
-            if y >= width || x >= height {
-                return true;
-            }
-        }
+        DisplayRotation::Rotate0 | DisplayRotation::Rotate180 if x >= width || y >= height => true,
+        DisplayRotation::Rotate90 | DisplayRotation::Rotate270 if y >= width || x >= height => true,
+        _ => false,
     }
-    false
 }
 
-fn find_position(x: u32, y: u32, width: u32, height: u32, rotation: DisplayRotation) -> (u32, u8) {
+/// Returns the position of the pixel in the (single color) buffer.
+///
+/// Return type is (byte index, bit)
+fn pixel_position_in_buffer(
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    rotation: DisplayRotation,
+) -> (u32, u8) {
     let (nx, ny) = find_rotation(x, y, width, height, rotation);
-    (nx / 8 + ((width + 7) / 8) * ny, 0x80 >> (nx % 8))
+    (nx / 8 + bytes_per_line(width) * ny, 0x80 >> (nx % 8))
 }
 
 fn find_rotation(x: u32, y: u32, width: u32, height: u32, rotation: DisplayRotation) -> (u32, u32) {
-    let nx;
-    let ny;
     match rotation {
-        DisplayRotation::Rotate0 => {
-            nx = x;
-            ny = y;
-        }
-        DisplayRotation::Rotate90 => {
-            nx = width - 1 - y;
-            ny = x;
-        }
-        DisplayRotation::Rotate180 => {
-            nx = width - 1 - x;
-            ny = height - 1 - y;
-        }
-        DisplayRotation::Rotate270 => {
-            nx = y;
-            ny = height - 1 - x;
-        }
+        DisplayRotation::Rotate0 => (x, y),
+        DisplayRotation::Rotate90 => (width - 1 - y, x),
+        DisplayRotation::Rotate180 => (width - 1 - x, height - 1 - y),
+        DisplayRotation::Rotate270 => (y, height - 1 - x),
     }
-    (nx, ny)
+}
+
+const fn bytes_per_line(width: u32) -> u32 {
+    (width + 7) / 8
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pixels_are_set_correctly_in_both_buffers_when_creating_new_tri_color_display() {
+        let display = Display::<8, 1, 2, TriColor>::new();
+        assert_eq!(display.buffer.len(), 2);
+
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_bw_buffer_when_drawing_black() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red_then_black() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red_black_red() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn clear_sets_both_buffers() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        display.clear(TriColor::White);
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+
+        display.clear(TriColor::Red);
+        assert_eq!(
+            display.buffer[0], 0b0000_0000,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1111_1111,
+            "Red buffer has incorrect value"
+        );
+    }
 }

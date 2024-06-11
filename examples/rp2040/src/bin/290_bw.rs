@@ -22,9 +22,8 @@ use heapless::String;
 use panic_probe as _;
 use profont::PROFONT_24_POINT;
 use weact_studio_epd::{
-    color::Color,
-    graphics::{buffer_len, Display, Display290Bw, DisplayRotation, DisplayTrait},
-    Driver,
+    graphics::{buffer_len, Display290BlackWhite, DisplayBlackWhite, DisplayRotation},
+    Color, WeActStudio290BlackWhiteDriver,
 };
 
 #[embassy_executor::main]
@@ -44,12 +43,13 @@ async fn main(_spawner: Spawner) {
     let spi_device = ExclusiveDevice::new(spi_bus, cs, Delay);
     let spi_interface = SPIInterface::new(spi_device, dc);
 
-    let mut driver: Driver<128, 296, _, _, _, _> = Driver::new(spi_interface, busy, res, Delay);
+    let mut driver = WeActStudio290BlackWhiteDriver::new(spi_interface, busy, res, Delay);
 
-    let mut display = Display290Bw::bw();
+    let mut display = Display290BlackWhite::new();
     display.set_rotation(DisplayRotation::Rotate90);
 
-    let mut partial_display_bw: Display<64, 128, { buffer_len(64, 128) }> = Display::bw();
+    let mut partial_display_bw =
+        DisplayBlackWhite::<64, 128, { buffer_len::<Color>(64, 128) }>::new();
     partial_display_bw.set_rotation(DisplayRotation::Rotate90);
 
     let mut now = Instant::now();
@@ -64,7 +64,7 @@ async fn main(_spawner: Spawner) {
         .unwrap();
     string_buf.clear();
 
-    driver.update(display.buffer()).unwrap();
+    driver.full_update(&display).unwrap();
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {
@@ -82,9 +82,9 @@ async fn main(_spawner: Spawner) {
         string_buf.clear();
 
         driver
-            .quick_partial_update(partial_display_bw.buffer(), 56, 156, 64, 128)
+            .fast_partial_update(&partial_display_bw, 56, 156)
             .unwrap();
 
-        partial_display_bw.clear_buffer(Color::White);
+        partial_display_bw.clear(Color::White);
     }
 }
