@@ -339,7 +339,7 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const BUFFER_SIZE: usize>(
+    pub fn update_from_display<const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
@@ -351,7 +351,11 @@ where
     /// `x` and the display width `W` must be multiples of 8.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn quick_partial_update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
+    pub fn quick_partial_update_from_display<
+        const W: u32,
+        const H: u32,
+        const BUFFER_SIZE: usize,
+    >(
         &mut self,
         display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
         x: u32,
@@ -381,7 +385,7 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const BUFFER_SIZE: usize>(
+    pub fn update_from_display<const BUFFER_SIZE: usize>(
         &mut self,
         display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
