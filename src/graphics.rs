@@ -273,7 +273,121 @@ fn find_rotation(x: u32, y: u32, width: u32, height: u32, rotation: DisplayRotat
     }
 }
 
-/// Count the number of bytes per line knowing that it may contains padding bits
 const fn bytes_per_line(width: u32) -> u32 {
     (width + 7) / 8
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pixels_are_set_correctly_in_both_buffers_when_creating_new_tri_color_display() {
+        let display = Display::<8, 1, 2, TriColor>::new();
+        assert_eq!(display.buffer.len(), 2);
+
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_bw_buffer_when_drawing_black() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red_then_black() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn pixel_is_set_in_both_buffers_when_drawing_red_black_red() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        assert_eq!(
+            display.buffer[0], 0b0111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1000_0000,
+            "Red buffer has incorrect value"
+        );
+    }
+
+    #[test]
+    fn clear_sets_both_buffers() {
+        let mut display = Display::<8, 1, 2, TriColor>::new();
+
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Black));
+        display.set_pixel(Pixel(Point::new(0, 0), TriColor::Red));
+
+        display.clear(TriColor::White);
+        assert_eq!(
+            display.buffer[0], 0b1111_1111,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b0000_0000,
+            "Red buffer has incorrect value"
+        );
+
+        display.clear(TriColor::Red);
+        assert_eq!(
+            display.buffer[0], 0b0000_0000,
+            "B/W buffer has incorrect value"
+        );
+        assert_eq!(
+            display.buffer[1], 0b1111_1111,
+            "Red buffer has incorrect value"
+        );
+    }
 }
