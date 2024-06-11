@@ -5,7 +5,6 @@ use embedded_hal::{
     delay::DelayNs,
     digital::{InputPin, OutputPin},
 };
-use sealed::sealed;
 
 use crate::{
     color::{self, ColorType},
@@ -14,50 +13,32 @@ use crate::{
     lut, Color, Result, TriColor,
 };
 
-#[sealed]
-pub trait Driver {
-    /// Display width. This can be more than the visible width of the display.
-    const WIDTH: u16;
-
-    /// Visible display width.
-    const VISIBLE_WIDTH: u16 = Self::WIDTH;
-
-    /// Display height.
-    const HEIGHT: u16;
-}
-
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290, Color>;
+    DisplayDriver<DI, BSY, RST, DELAY, 128, 128, 296, Color>;
 /// Display driver for the WeAct Studio 2.9 inch Tri-Color display.
 pub type WeActStudio290TriColorDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio290, TriColor>;
-pub struct WeActStudio290;
-#[sealed]
-impl Driver for WeActStudio290 {
-    const WIDTH: u16 = 128;
-    const HEIGHT: u16 = 296;
-}
-
+    DisplayDriver<DI, BSY, RST, DELAY, 128, 128, 296, TriColor>;
 /// Display driver for the WeAct Studio 2.13 inch B/W display.
 pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213, Color>;
+    DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, Color>;
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
-    DisplayDriver<DI, BSY, RST, DELAY, WeActStudio213, TriColor>;
-pub struct WeActStudio213;
-#[sealed]
-impl Driver for WeActStudio213 {
-    const WIDTH: u16 = 128;
-    const VISIBLE_WIDTH: u16 = 122;
-    const HEIGHT: u16 = 250;
-}
+    DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, TriColor>;
 
 /// The main driver struct that manages the communication with the display.
 ///
 /// You probably want to use one of the display-specific type aliases instead.
-pub struct DisplayDriver<DI, BSY, RST, DELAY, D, C> {
-    _driver: core::marker::PhantomData<D>,
+pub struct DisplayDriver<
+    DI,
+    BSY,
+    RST,
+    DELAY,
+    const WIDTH: u32,
+    const VISIBLE_WIDTH: u32,
+    const HEIGHT: u32,
+    C,
+> {
     _color: core::marker::PhantomData<C>,
     interface: DI,
     busy: BSY,
@@ -68,13 +49,14 @@ pub struct DisplayDriver<DI, BSY, RST, DELAY, D, C> {
     initial_full_refresh_done: bool,
 }
 
-impl<DI, BSY, RST, DELAY, D, C> DisplayDriver<DI, BSY, RST, DELAY, D, C>
+impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32, C>
+    DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, C>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: Driver,
+    C: ColorType,
 {
     const RESET_DELAY_MS: u32 = 50;
 
@@ -83,7 +65,6 @@ where
     /// Use [`Self::init`] to initialize the display.
     pub fn new(interface: DI, busy: BSY, reset: RST, delay: DELAY) -> Self {
         Self {
-            _driver: core::marker::PhantomData,
             _color: core::marker::PhantomData,
             interface,
             busy,
@@ -102,7 +83,7 @@ where
         self.wait_until_idle();
         self.command_with_data(
             command::DRIVER_CONTROL,
-            &[(D::HEIGHT - 1) as u8, ((D::HEIGHT - 1) >> 8) as u8, 0x00],
+            &[(HEIGHT - 1) as u8, ((HEIGHT - 1) >> 8) as u8, 0x00],
         )?;
         self.command_with_data(command::DATA_ENTRY_MODE, &[flag::DATA_ENTRY_INCRY_INCRX])?;
         self.command_with_data(
@@ -182,7 +163,7 @@ where
         let color = color::Color::White.byte_value().0;
 
         self.command(command::WRITE_BW_DATA)?;
-        self.data_x_times(color, u32::from(D::WIDTH) / 8 * u32::from(D::HEIGHT))?;
+        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
         Ok(())
     }
 
@@ -196,7 +177,7 @@ where
         let color = color::Color::White.byte_value().1;
 
         self.command(command::WRITE_RED_DATA)?;
-        self.data_x_times(color, u32::from(D::WIDTH) / 8 * u32::from(D::HEIGHT))?;
+        self.data_x_times(color, u32::from(WIDTH) / 8 * u32::from(HEIGHT))?;
         Ok(())
     }
 
@@ -212,7 +193,7 @@ where
     }
 
     fn use_full_frame(&mut self) -> Result<()> {
-        self.use_partial_frame(0, 0, u32::from(D::WIDTH), u32::from(D::HEIGHT))?;
+        self.use_partial_frame(0, 0, u32::from(WIDTH), u32::from(HEIGHT))?;
         Ok(())
     }
 
@@ -290,13 +271,13 @@ where
 }
 
 // Functions avialable only for B/W displays
-impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D, Color>
+impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
+    DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, Color>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: Driver,
 {
     /// Start a quick refresh of the display.
     ///
@@ -358,9 +339,9 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
         self.update(display.buffer())
     }
@@ -370,13 +351,9 @@ where
     /// `x` must be multiples of 8.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn quick_partial_update_display<
-        const WIDTH: u32,
-        const HEIGHT: u32,
-        const BUFFER_SIZE: usize,
-    >(
+    pub fn quick_partial_update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
         x: u32,
         y: u32,
     ) -> Result<()> {
@@ -385,13 +362,13 @@ where
 }
 
 // Functions avialable only for Tricolor displays
-impl<DI, BSY, RST, DELAY, D> DisplayDriver<DI, BSY, RST, DELAY, D, TriColor>
+impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
+    DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, TriColor>
 where
     DI: WriteOnlyDataCommand,
     BSY: InputPin,
     RST: OutputPin,
     DELAY: DelayNs,
-    D: Driver,
 {
     /// Update the screen with the provided buffers using a full refresh.
     pub fn update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
@@ -404,9 +381,9 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn update_display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>(
+    pub fn update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
         &mut self,
-        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
+        display: Display<W, H, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
         self.update(display.bw_buffer(), display.red_buffer())
     }
