@@ -40,8 +40,8 @@ pub trait ColorType {
     /// Bit value of this color in the buffer.
     ///
     /// Return values are:
-    /// * `.0`: byte value in the first buffer
-    /// * `.1`: byte value in the second buffer (only applicable to TriColor)
+    /// * `.0`: bit value in the first buffer
+    /// * `.1`: bit value in the second buffer (only applicable to TriColor)
     fn bit_value(&self) -> (u8, u8);
 }
 

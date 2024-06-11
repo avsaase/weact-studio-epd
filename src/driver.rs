@@ -270,7 +270,7 @@ where
     }
 }
 
-// Functions avialable only for B/W displays
+/// Functions available only for B/W displays
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, Color>
 where
@@ -348,7 +348,7 @@ where
 
     /// Update the screen with the provided [`Display`] at the given position using a partial refresh.
     ///
-    /// `x` must be multiples of 8.
+    /// `x` and the display width `W` must be multiples of 8.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
     pub fn quick_partial_update_display<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
@@ -361,7 +361,7 @@ where
     }
 }
 
-// Functions avialable only for Tricolor displays
+/// Functions available only for tri-color displays
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, TriColor>
 where

@@ -9,7 +9,7 @@ use embedded_graphics::{
 
 use crate::color::{Color, ColorType, TriColor};
 
-/// Rotation of the display
+/// Rotation of the display.
 #[derive(Debug, Clone, Copy, Default)]
 pub enum DisplayRotation {
     /// No rotation.
@@ -44,19 +44,20 @@ pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize
 
 /// Display buffer for the WeAct Studio 2.9 inch B/W display.
 pub type Display290BlackWhite = Display<128, 296, { buffer_len::<Color>(128, 296) }, Color>;
-/// Display buffer for the WeAct Studio 2.9 inch Tri-Color display.
+/// Display buffer for the WeAct Studio 2.9 inch tri-color display.
 pub type Display290TriColor = Display<128, 296, { buffer_len::<TriColor>(128, 296) }, TriColor>;
 /// Display buffer for the WeAct Studio 2.13 inch B/W display.
 pub type Display213BlackWhite = Display<128, 250, { buffer_len::<Color>(128, 250) }, Color>;
-/// Display buffer for the WeAct Studio 2.13 inch Tri-Color display.
+/// Display buffer for the WeAct Studio 2.13 inch tri-color display.
 pub type Display213TriColor = Display<128, 250, { buffer_len::<TriColor>(128, 250) }, TriColor>;
 
-/// Generically sized B/W display buffer.
+/// Generically-sized B/W display buffer.
 ///
 /// `BUFFER_SIZE` can be calculated using [`buffer_len`].
 pub type DisplayBlackWhite<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
     Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>;
-/// Generically sized Tri color display buffer.
+
+/// Generically-sized tri-color display buffer.
 ///
 /// `BUFFER_SIZE` can be calculated using [`buffer_len`].
 pub type DisplayTriColor<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> =
