@@ -25,21 +25,21 @@ pub enum DisplayRotation {
 
 /// Computes the needed buffer length. Takes care of rounding up in case `width`
 /// is not divisible by 8.
-pub const fn buffer_len<COLOR>(width: usize, height: usize) -> usize
+pub const fn buffer_len<C>(width: usize, height: usize) -> usize
 where
-    COLOR: ColorType,
+    C: ColorType,
 {
-    (width + 7) / 8 * height * COLOR::BUFFER_COUNT
+    (width + 7) / 8 * height * C::BUFFER_COUNT
 }
 
 /// In-memory display buffer to render to using `embedded-graphics`.
 ///
 /// `BUFFER_SIZE` can be calculated using [`buffer_len`].
-pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, COLOR> {
+pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> {
     buffer: [u8; BUFFER_SIZE],
     rotation: DisplayRotation,
-    background_color: COLOR,
-    _color: core::marker::PhantomData<COLOR>,
+    background_color: C,
+    _color: core::marker::PhantomData<C>,
 }
 
 /// Display buffer for the WeAct Studio 2.9 inch B/W display.
@@ -123,10 +123,10 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
     }
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, COLOR>
-    Display<WIDTH, HEIGHT, BUFFER_SIZE, COLOR>
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C>
+    Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
 where
-    COLOR: ColorType + PixelColor,
+    C: ColorType + PixelColor,
 {
     // /// Get the internal buffer.
     // pub fn buffer(&self) -> &[u8] {
@@ -143,7 +143,7 @@ where
         self.rotation = rotation;
     }
 
-    fn set_pixel(&mut self, pixel: Pixel<COLOR>) {
+    fn set_pixel(&mut self, pixel: Pixel<C>) {
         // let rotation = self.rotation;
         let Pixel(point, color) = pixel;
         let Point { x, y } = point;
@@ -158,7 +158,7 @@ where
         let (bw_bit, red_bit) = color.bit_value();
 
         #[allow(clippy::collapsible_else_if)]
-        if COLOR::BUFFER_COUNT == 2 {
+        if C::BUFFER_COUNT == 2 {
             if red_bit == 1 {
                 // Red buffer takes precendence over B/W buffer so no need to update B/W buffer.
                 self.buffer[index + BUFFER_SIZE / 2] |= bit;
@@ -180,12 +180,12 @@ where
     }
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, COLOR> DrawTarget
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE, COLOR>
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> DrawTarget
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
 where
-    COLOR: PixelColor + ColorType,
+    C: PixelColor + ColorType,
 {
-    type Color = COLOR;
+    type Color = C;
     type Error = Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -207,10 +207,10 @@ impl PixelColor for TriColor {
     type Raw = ();
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, COLOR> OriginDimensions
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE, COLOR>
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> OriginDimensions
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
 where
-    COLOR: PixelColor + ColorType,
+    C: PixelColor + ColorType,
 {
     fn size(&self) -> Size {
         //if display is rotated 90 deg or 270 then swap height and width
