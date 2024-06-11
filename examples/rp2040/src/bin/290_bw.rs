@@ -85,6 +85,6 @@ async fn main(_spawner: Spawner) {
             .quick_partial_update_display(&partial_display_bw, 56, 156)
             .unwrap();
 
-        partial_display_bw.clear_buffer();
+        partial_display_bw.clear(Color::White);
     }
 }

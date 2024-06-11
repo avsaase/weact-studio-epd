@@ -38,7 +38,6 @@ where
 pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> {
     buffer: [u8; BUFFER_SIZE],
     rotation: DisplayRotation,
-    background_color: C,
     _color: core::marker::PhantomData<C>,
 }
 
@@ -68,11 +67,9 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
 {
     /// Creates a new display buffer filled with the default color.
     pub fn new() -> Self {
-        let background_color = Color::default();
         Self {
-            buffer: [background_color.byte_value().0; BUFFER_SIZE],
+            buffer: [Color::default().byte_value().0; BUFFER_SIZE],
             rotation: Default::default(),
-            background_color,
             _color: core::marker::PhantomData,
         }
     }
@@ -82,9 +79,9 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         &self.buffer
     }
 
-    /// Clear the display buffer with the default color.
-    pub fn clear_buffer(&mut self) {
-        self.buffer.fill(self.background_color.byte_value().0);
+    /// Clear the display buffer with the given color.
+    pub fn clear(&mut self, color: Color) {
+        self.buffer.fill(color.byte_value().0);
     }
 }
 
@@ -102,7 +99,6 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         Self {
             buffer,
             rotation: Default::default(),
-            background_color,
             _color: core::marker::PhantomData,
         }
     }
@@ -117,10 +113,10 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize>
         &self.buffer[(BUFFER_SIZE / 2)..]
     }
 
-    /// Clear the display buffer with the default color.
-    pub fn clear_buffer(&mut self) {
-        self.buffer[..(BUFFER_SIZE / 2)].fill(self.background_color.byte_value().0);
-        self.buffer[(BUFFER_SIZE / 2)..].fill(self.background_color.byte_value().1);
+    /// Clear the display buffer with the given color.
+    pub fn clear(&mut self, color: TriColor) {
+        self.buffer[..(BUFFER_SIZE / 2)].fill(color.byte_value().0);
+        self.buffer[(BUFFER_SIZE / 2)..].fill(color.byte_value().1);
     }
 }
 
@@ -129,11 +125,6 @@ impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C>
 where
     C: ColorType + PixelColor,
 {
-    // /// Get the internal buffer.
-    // pub fn buffer(&self) -> &[u8] {
-    //     &self.buffer
-    // }
-
     /// Get the current rotation of the display.
     pub fn rotation(&self) -> DisplayRotation {
         self.rotation
@@ -181,12 +172,10 @@ where
     }
 }
 
-impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize, C> DrawTarget
-    for Display<WIDTH, HEIGHT, BUFFER_SIZE, C>
-where
-    C: PixelColor + ColorType,
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>
 {
-    type Color = C;
+    type Color = Color;
     type Error = Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -196,6 +185,33 @@ where
         for p in pixels.into_iter() {
             self.set_pixel(p);
         }
+        Ok(())
+    }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.clear(color);
+        Ok(())
+    }
+}
+
+impl<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize> DrawTarget
+    for Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>
+{
+    type Color = TriColor;
+    type Error = Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for p in pixels.into_iter() {
+            self.set_pixel(p);
+        }
+        Ok(())
+    }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.clear(color);
         Ok(())
     }
 }
