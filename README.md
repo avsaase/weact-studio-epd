@@ -15,13 +15,13 @@ Unofficial Rust driver for WeAct Studio e-paper displays.
 
 [^2]: Refresh the screen without flickering the screen a few times.
 
+## Examples
+
+See the `examples` folder for complete usage examples.
+
 ## Features
 
 - `graphics`: Enables `embedded-graphics` support. Enabled by default.
-
-## Examples
-
-See the `examples` folder for usage examples.
 
 ## Credits
 

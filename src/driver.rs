@@ -300,7 +300,7 @@ where
     }
 
     /// Update the screen with the provided full frame buffer using a full refresh.
-    pub fn full_update(&mut self, buffer: &[u8]) -> Result<()> {
+    pub fn full_update_from_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.write_bw_buffer(buffer)?;
         self.full_refresh()?;
@@ -310,7 +310,7 @@ where
     }
 
     /// Update the screen with the provided full frame buffer using a fast refresh.
-    pub fn fast_update(&mut self, buffer: &[u8]) -> Result<()> {
+    pub fn fast_update_from_buffer(&mut self, buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(buffer)?;
         self.fast_refresh()?;
         self.write_red_buffer(buffer)?;
@@ -321,7 +321,7 @@ where
     /// Update the screen with the provided partial frame buffer at the given position using a fast refresh.
     ///
     /// `x`, and `width` must be multiples of 8.
-    pub fn fast_partial_update(
+    pub fn fast_partial_update_from_buffer(
         &mut self,
         buffer: &[u8],
         x: u32,
@@ -339,21 +339,21 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn full_update_from_display<const BUFFER_SIZE: usize>(
+    pub fn full_update<const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
-        self.full_update(display.buffer())
+        self.full_update_from_buffer(display.buffer())
     }
 
     /// Update the screen with the provided [`Display`] using a fast refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn fast_update_from_display<const BUFFER_SIZE: usize>(
+    pub fn fast_update<const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
     ) -> Result<()> {
-        self.fast_update(display.buffer())
+        self.fast_update_from_buffer(display.buffer())
     }
 
     /// Update the screen with the provided partial [`Display`] at the given position using a fast refresh.
@@ -361,17 +361,13 @@ where
     /// `x` and the display width `W` must be multiples of 8.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn fast_partial_update_from_display<
-        const W: u32,
-        const H: u32,
-        const BUFFER_SIZE: usize,
-    >(
+    pub fn fast_partial_update<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
         &mut self,
         display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
         x: u32,
         y: u32,
     ) -> Result<()> {
-        self.fast_partial_update(display.buffer(), x, y, W, H)
+        self.fast_partial_update_from_buffer(display.buffer(), x, y, W, H)
     }
 }
 
@@ -385,7 +381,7 @@ where
     DELAY: DelayNs,
 {
     /// Update the screen with the provided full frame buffers using a full refresh.
-    pub fn full_update(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
+    pub fn full_update_from_buffer(&mut self, bw_buffer: &[u8], red_buffer: &[u8]) -> Result<()> {
         self.write_red_buffer(red_buffer)?;
         self.write_bw_buffer(bw_buffer)?;
         self.full_refresh()?;
@@ -395,12 +391,12 @@ where
     /// Update the screen with the provided [`Display`] using a full refresh.
     #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
     #[cfg(feature = "graphics")]
-    pub fn full_update_from_display<const BUFFER_SIZE: usize>(
+    pub fn full_update<const BUFFER_SIZE: usize>(
         &mut self,
         display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
     ) -> Result<()> {
-        self.full_update(display.bw_buffer(), display.red_buffer())
+        self.full_update_from_buffer(display.bw_buffer(), display.red_buffer())
     }
 
-    // TODO: check if partial updates
+    // TODO: check if partial updates with full refresh are supported
 }
