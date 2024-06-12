@@ -1,3 +1,4 @@
+#[cfg(feature = "graphics")]
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
 use sealed::sealed;
 
@@ -11,6 +12,8 @@ pub enum Color {
     White,
 }
 
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
 impl From<BinaryColor> for Color {
     fn from(value: BinaryColor) -> Self {
         match value {
@@ -21,6 +24,8 @@ impl From<BinaryColor> for Color {
 }
 
 /// Conversion to RGB888 to use `Color` with `embedded-graphics-simulator`.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
 impl From<Color> for Rgb888 {
     fn from(value: Color) -> Self {
         match value {
@@ -33,6 +38,8 @@ impl From<Color> for Rgb888 {
 /// Conversion from RGB888 to use `Color` with `embedded-graphics-simulator`.
 ///
 /// Panics if the RGB value is not black or white.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
 impl From<Rgb888> for Color {
     fn from(value: Rgb888) -> Self {
         match value {
