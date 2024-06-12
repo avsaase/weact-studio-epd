@@ -4,14 +4,14 @@ use core::iter;
 use display_interface::AsyncWriteOnlyDataCommand;
 #[cfg(feature = "blocking")]
 use display_interface::WriteOnlyDataCommand;
+
+#[cfg(feature = "blocking")]
+use embedded_hal::delay::DelayNs;
 #[cfg(not(feature = "blocking"))]
-use embedded_hal_async::digital::Wait;
+use embedded_hal_async::{delay::DelayNs, digital::Wait};
 
 use display_interface::DataFormat;
-use embedded_hal::{
-    delay::DelayNs,
-    digital::{InputPin, OutputPin},
-};
+use embedded_hal::digital::{InputPin, OutputPin};
 
 #[cfg(feature = "graphics")]
 use crate::graphics::Display;
@@ -95,9 +95,9 @@ where
 
     /// Initialize the display
     pub async fn init(&mut self) -> Result<()> {
-        self.hw_reset();
+        self.hw_reset().await;
         self.command(command::SW_RESET).await?;
-        self.delay.delay_ms(10);
+        self.delay.delay_ms(10).await;
         self.wait_until_idle().await;
         self.command_with_data(
             command::DRIVER_CONTROL,
@@ -121,11 +121,11 @@ where
     }
 
     /// Perform a hardware reset of the display.
-    pub fn hw_reset(&mut self) {
+    pub async fn hw_reset(&mut self) {
         self.reset.set_low().unwrap();
-        self.delay.delay_ms(Self::RESET_DELAY_MS);
+        self.delay.delay_ms(Self::RESET_DELAY_MS).await;
         self.reset.set_high().unwrap();
-        self.delay.delay_ms(Self::RESET_DELAY_MS);
+        self.delay.delay_ms(Self::RESET_DELAY_MS).await;
     }
 
     /// Write to the B/W buffer.
