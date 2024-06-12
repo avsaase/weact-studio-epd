@@ -13,11 +13,11 @@ use embedded_hal::{
     digital::{InputPin, OutputPin},
 };
 
+#[cfg(feature = "graphics")]
+use crate::graphics::Display;
 use crate::{
     color::{self, ColorType},
-    command, flag,
-    graphics::Display,
-    lut, Color, Result, TriColor,
+    command, flag, lut, Color, Result, TriColor,
 };
 
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
@@ -36,17 +36,6 @@ pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
 /// The main driver struct that manages the communication with the display.
 ///
 /// You probably want to use one of the display-specific type aliases instead.
-#[maybe_async_cfg::maybe(
-    sync(
-        feature = "blocking",
-        keep_self,
-        idents(
-            AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
-            Wait(sync = "InputPin")
-        )
-    ),
-    async(not(feature = "blocking"), keep_self)
-)]
 pub struct DisplayDriver<
     DI,
     BSY,
@@ -415,7 +404,7 @@ where
     #[cfg(feature = "graphics")]
     pub async fn full_update<const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>,
     ) -> Result<()> {
         self.full_update_from_buffer(display.buffer()).await
     }
@@ -425,7 +414,7 @@ where
     #[cfg(feature = "graphics")]
     pub async fn fast_update<const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, Color>,
     ) -> Result<()> {
         self.fast_update_from_buffer(display.buffer()).await
     }
@@ -437,7 +426,7 @@ where
     #[cfg(feature = "graphics")]
     pub async fn fast_partial_update<const W: u32, const H: u32, const BUFFER_SIZE: usize>(
         &mut self,
-        display: &Display<W, H, BUFFER_SIZE, crate::color::Color>,
+        display: &Display<W, H, BUFFER_SIZE, Color>,
         x: u32,
         y: u32,
     ) -> Result<()> {
@@ -483,7 +472,7 @@ where
     #[cfg(feature = "graphics")]
     pub async fn full_update<const BUFFER_SIZE: usize>(
         &mut self,
-        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, crate::color::TriColor>,
+        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>,
     ) -> Result<()> {
         self.full_update_from_buffer(display.bw_buffer(), display.red_buffer())
             .await
