@@ -17,7 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo clippy --all-features
+      - uses: romnn/cargo-feature-combinations@main
+      - run: cargo fc clippy
 
   test:
     name: cargo test
@@ -25,7 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test --all-features
+      - uses: romnn/cargo-feature-combinations@main
+      - run: cargo test
 
   formatting:
     name: cargo fmt
