@@ -8,9 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-feature-combinations
+      - uses: romnn/cargo-feature-combinations@main
       - run: cargo fc check
 
   lints:
