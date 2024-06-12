@@ -1,3 +1,4 @@
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
 use sealed::sealed;
 
 /// Color definition for B/W displays
@@ -8,6 +9,38 @@ pub enum Color {
     /// White color
     #[default]
     White,
+}
+
+impl From<BinaryColor> for Color {
+    fn from(value: BinaryColor) -> Self {
+        match value {
+            BinaryColor::Off => Color::Black,
+            BinaryColor::On => Color::White,
+        }
+    }
+}
+
+/// Conversion to RGB888 to use `Color` with `embedded-graphics-simulator`.
+impl From<Color> for Rgb888 {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::Black => Rgb888::BLACK,
+            Color::White => Rgb888::WHITE,
+        }
+    }
+}
+
+/// Conversion from RGB888 to use `Color` with `embedded-graphics-simulator`.
+///
+/// Panics if the RGB value is not black or white.
+impl From<Rgb888> for Color {
+    fn from(value: Rgb888) -> Self {
+        match value {
+            Rgb888::BLACK => Color::Black,
+            Rgb888::WHITE => Color::White,
+            _ => panic!("RGB value must be black or white"),
+        }
+    }
 }
 
 /// Color for tri-color displays
