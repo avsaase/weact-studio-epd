@@ -8,13 +8,17 @@ description = "Unofficial driver for WeAct Studio E-paper modules"
 [dependencies]
 display-interface = "0.5.0"
 embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
 embedded-graphics = { version = "0.8.1", optional = true }
+maybe-async-cfg = "0.2.3"
 sealed = "0.5.0"
 
 [features]
 default = ["graphics"]
-# Enable `embedded-graphics` support
+# Enable `embedded-graphics` support.
 graphics = ["dep:embedded-graphics"]
+# Switch to a blocking API. Replaces the async API.
+blocking = []
 
 [package.metadata.docs.rs]
 all-features = true

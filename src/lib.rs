@@ -15,12 +15,7 @@ pub mod graphics;
 mod lut;
 
 pub use color::{Color, TriColor};
-pub use driver::DisplayDriver;
-
-pub use driver::WeActStudio213BlackWhiteDriver;
-pub use driver::WeActStudio213TriColorDriver;
-pub use driver::WeActStudio290BlackWhiteDriver;
-pub use driver::WeActStudio290TriColorDriver;
+pub use driver::*;
 
 /// Alias for `Result<T, DisplayError>`.
 pub type Result<T> = core::result::Result<T, display_interface::DisplayError>;
