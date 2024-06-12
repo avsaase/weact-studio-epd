@@ -14,8 +14,8 @@ pub enum Color {
 impl From<BinaryColor> for Color {
     fn from(value: BinaryColor) -> Self {
         match value {
-            BinaryColor::Off => Color::Black,
-            BinaryColor::On => Color::White,
+            BinaryColor::Off => Color::White,
+            BinaryColor::On => Color::Black,
         }
     }
 }
