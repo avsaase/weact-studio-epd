@@ -371,7 +371,7 @@ where
 
     /// Update the screen with the provided full frame buffer using a fast refresh.
     pub async fn fast_update_from_buffer(&mut self, buffer: &[u8]) -> Result<()> {
-        self.write_red_buffer(buffer).await?;
+        self.write_bw_buffer(buffer).await?;
         self.fast_refresh().await?;
         self.write_red_buffer(buffer).await?;
         self.write_bw_buffer(buffer).await?;
