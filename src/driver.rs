@@ -1,10 +1,10 @@
 use core::iter;
 
-#[cfg(not(feature = "sync"))]
+#[cfg(not(feature = "blocking"))]
 use display_interface::AsyncWriteOnlyDataCommand;
-#[cfg(feature = "sync")]
+#[cfg(feature = "blocking")]
 use display_interface::WriteOnlyDataCommand;
-#[cfg(not(feature = "sync"))]
+#[cfg(not(feature = "blocking"))]
 use embedded_hal_async::digital::Wait;
 
 use display_interface::DataFormat;
@@ -38,14 +38,14 @@ pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
 /// You probably want to use one of the display-specific type aliases instead.
 #[maybe_async_cfg::maybe(
     sync(
-        feature = "sync",
+        feature = "blocking",
         keep_self,
         idents(
             AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
             Wait(sync = "InputPin")
         )
     ),
-    async(not(feature = "sync"), keep_self)
+    async(not(feature = "blocking"), keep_self)
 )]
 pub struct DisplayDriver<
     DI,
@@ -69,14 +69,14 @@ pub struct DisplayDriver<
 
 #[maybe_async_cfg::maybe(
     sync(
-        feature = "sync",
+        feature = "blocking",
         keep_self,
         idents(
             AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
             Wait(sync = "InputPin")
         )
     ),
-    async(not(feature = "sync"), keep_self)
+    async(not(feature = "blocking"), keep_self)
 )]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32, C>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, C>
@@ -302,12 +302,12 @@ where
 
     /// Waits until device isn't busy anymore (busy == HIGH).
     async fn wait_until_idle(&mut self) {
-        #[cfg(feature = "sync")]
+        #[cfg(feature = "blocking")]
         while self.busy.is_high().unwrap_or(true) {
             self.delay.delay_ms(1)
         }
 
-        #[cfg(not(feature = "sync"))]
+        #[cfg(not(feature = "blocking"))]
         let _ = self.busy.wait_for_low().await;
     }
 
@@ -331,14 +331,14 @@ where
 /// Functions available only for B/W displays
 #[maybe_async_cfg::maybe(
     sync(
-        feature = "sync",
+        feature = "blocking",
         keep_self,
         idents(
             AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
             Wait(sync = "InputPin")
         )
     ),
-    async(not(feature = "sync"), keep_self)
+    async(not(feature = "blocking"), keep_self)
 )]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, Color>
@@ -449,14 +449,14 @@ where
 /// Functions available only for tri-color displays
 #[maybe_async_cfg::maybe(
     sync(
-        feature = "sync",
+        feature = "blocking",
         keep_self,
         idents(
             AsyncWriteOnlyDataCommand(sync = "WriteOnlyDataCommand"),
             Wait(sync = "InputPin")
         )
     ),
-    async(not(feature = "sync"), keep_self)
+    async(not(feature = "blocking"), keep_self)
 )]
 impl<DI, BSY, RST, DELAY, const WIDTH: u32, const VISIBLE_WIDTH: u32, const HEIGHT: u32>
     DisplayDriver<DI, BSY, RST, DELAY, WIDTH, VISIBLE_WIDTH, HEIGHT, TriColor>

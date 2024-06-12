@@ -42,4 +42,4 @@ display-interface = "0.5.0"
 heapless = "0.8.0"
 profont = "0.7.0"
 
-weact-studio-epd = { path = "../..", features = ["sync"] }
+weact-studio-epd = { path = "../..", features = ["blocking"] }

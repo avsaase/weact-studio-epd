@@ -4,6 +4,8 @@ Unofficial Rust driver for WeAct Studio e-paper displays.
 
 The driver exposes both write access to the screen frame buffers and higher-level `embedded-graphics` support.
 
+By default this driver uses `async`. If you prefer to use a blocking API instead you can enable the `blocking` feature.
+
 ## Supported displays
 
 | Display | Colors | Supported | Partial update[^1] | Fast refresh[^2] | Tested |
@@ -23,6 +25,7 @@ See the `examples` folder for complete usage examples.
 
 ## Features
 
+- `blocking`: Replaces the API with a blocking version. This disables the `async` API so you cannot use both in the same project.
 - `graphics`: Enables `embedded-graphics` support. Enabled by default.
 
 ## Credits

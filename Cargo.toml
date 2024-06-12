@@ -17,8 +17,8 @@ sealed = "0.5.0"
 default = ["graphics"]
 # Enable `embedded-graphics` support.
 graphics = ["dep:embedded-graphics"]
-# Switch to a sync driver.
-sync = []
+# Switch to a blocking API. Replaces the async API.
+blocking = []
 
 [package.metadata.docs.rs]
 all-features = true
