@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Alexander van Saase <avsaase@gmail.com>"]
 description = "Unofficial driver for WeAct Studio E-paper modules"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/avsaase/weact-studio-epd"
 
 [dependencies]
 display-interface = "0.5.0"
