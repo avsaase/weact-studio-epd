@@ -1,6 +1,6 @@
 [package]
 name = "weact-studio-epd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Alexander van Saase <avsaase@gmail.com>"]
 description = "Unofficial driver for WeAct Studio E-paper modules"
