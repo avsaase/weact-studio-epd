@@ -1,5 +1,5 @@
 #[cfg(feature = "graphics")]
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor, Rgb565, Rgb555};
 use sealed::sealed;
 
 /// Color definition for B/W displays
@@ -46,6 +46,66 @@ impl From<Rgb888> for Color {
             Rgb888::BLACK => Color::Black,
             Rgb888::WHITE => Color::White,
             _ => panic!("RGB value must be black or white"),
+        }
+    }
+}
+
+/// Conversion from Rgb565 to use `Color` with tinybmp
+#[cfg(feature = "graphics")]
+impl From<Rgb565> for Color {
+    fn from(rgb: Rgb565) -> Self {
+        if rgb == RgbColor::BLACK {
+            Color::White
+        } else if rgb == RgbColor::WHITE {
+            Color::Black
+        } else {
+            // choose closest color
+            if (rgb.r() as u16 + rgb.g() as u16 + rgb.b() as u16) > 255 * 3 / 2 {
+                Color::Black
+            } else {
+                Color::White
+            }
+        }
+    }
+}
+
+/// Conversion to Rgb565 to use `Color` with tinybmp
+#[cfg(feature = "graphics")]
+impl From<Color> for Rgb565 {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Black => Self::WHITE,
+            Color::White => Self::BLACK,
+        }
+    }
+}
+
+/// Conversion from Rgb555 to use `Color` with tinybmp
+#[cfg(feature = "graphics")]
+impl From<Rgb555> for Color {
+    fn from(rgb: Rgb555) -> Self {
+        if rgb == RgbColor::BLACK {
+            Color::White
+        } else if rgb == RgbColor::WHITE {
+            Color::Black
+        } else {
+            // choose closest color
+            if (rgb.r() as u16 + rgb.g() as u16 + rgb.b() as u16) > 255 * 3 / 2 {
+                Color::Black
+            } else {
+                Color::White
+            }
+        }
+    }
+}
+
+/// Conversion to Rgb555 to use `Color` with tinybmp
+#[cfg(feature = "graphics")]
+impl From<Color> for Rgb555 {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Black => Self::WHITE,
+            Color::White => Self::BLACK,
         }
     }
 }
