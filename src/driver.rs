@@ -224,7 +224,13 @@ where
     /// You will need to call wakeup() before you can draw to the screen again.
     pub async fn sleep(&mut self) -> Result<()> {
         self.wait_until_idle().await;
-        self.command_with_data(command::DEEP_SLEEP, &[flag::DEEP_SLEEP_MODE_1]).await?;
+
+        // We can't use send_with_data, because the data function will also wait_until_idle,
+        // but after sending the deep sleep command, busy will not be cleared,
+        // maybe as a feature to signal the device won't be able to process further instuctions until woken again.
+        self.interface.send_commands(DataFormat::U8(&[command::DEEP_SLEEP])).await?;
+        self.interface.send_data(DataFormat::U8(&[flag::DEEP_SLEEP_MODE_1])).await?;
+
         Ok(())
     }
 
