@@ -1,5 +1,5 @@
 #[cfg(feature = "graphics")]
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor, Rgb565, Rgb555};
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb555, Rgb565, Rgb888, RgbColor};
 use sealed::sealed;
 
 /// Color definition for B/W displays
