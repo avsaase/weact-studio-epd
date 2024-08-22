@@ -1,0 +1,36 @@
+[package]
+name = "esp32c6_example"
+version = "0.1.0"
+authors = ["Leon <12817042+thedevleon@users.noreply.github.com>"]
+edition = "2021"
+
+[dependencies]
+display-interface-spi = "0.5.0"
+embedded-graphics = "0.8.1"
+embedded-hal-bus = "0.2.0"
+esp-backtrace = { version = "0.13.0", features = [
+    "esp32c6",
+    "exception-handler",
+    "panic-handler",
+    "println",
+] }
+esp-hal = { version = "0.19.0", features = [ "esp32c6", "embedded-hal"] }
+esp-println = { version = "0.10.0", default-features = false, features = ["esp32c6", "log", "jtag-serial"] }
+heapless = "0.8.0"
+log = { version = "0.4.21" }
+profont = "0.7.0"
+weact-studio-epd = { path = "../..", features=["blocking"] }
+
+[profile.dev]
+# Rust debug is too slow.
+# For debug builds always builds with some optimization
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1 # LLVM can perform better optimizations using a single thread
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false

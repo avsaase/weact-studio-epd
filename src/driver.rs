@@ -229,8 +229,9 @@ where
     }
 
     /// Wake the device up from deep-sleep mode.
-    pub async fn wakeup(&mut self) -> Result<()> {
-        self.init().await?;
+    pub async fn wake_up(&mut self) -> Result<()> {
+        // HW reset seems to be enough in deep sleep mode 1, no need to call init again
+        self.hw_reset().await;
         Ok(())
     }
 
