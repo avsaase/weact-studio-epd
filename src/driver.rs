@@ -220,6 +220,20 @@ where
         Ok(())
     }
 
+    /// Put the device into deep-sleep mode.
+    /// You will need to call wakeup() before you can draw to the screen again.
+    pub async fn sleep(&mut self) -> Result<()> {
+        self.wait_until_idle().await;
+        self.command_with_data(command::DEEP_SLEEP, &[flag::DEEP_SLEEP_MODE_1]).await?;
+        Ok(())
+    }
+
+    /// Wake the device up from deep-sleep mode.
+    pub async fn wakeup(&mut self) -> Result<()> {
+        self.init().await?;
+        Ok(())
+    }
+
     async fn use_full_frame(&mut self) -> Result<()> {
         self.use_partial_frame(0, 0, WIDTH, HEIGHT).await?;
         Ok(())
