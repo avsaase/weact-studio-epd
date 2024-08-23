@@ -472,7 +472,7 @@ where
     #[cfg(feature = "graphics")]
     pub async fn full_update<const BUFFER_SIZE: usize>(
         &mut self,
-        display: Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>,
+        display: &Display<WIDTH, HEIGHT, BUFFER_SIZE, TriColor>,
     ) -> Result<()> {
         self.full_update_from_buffer(display.bw_buffer(), display.red_buffer())
             .await
