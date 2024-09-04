@@ -35,7 +35,7 @@ pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, TriColor>;
-/// Display driver for the WeAct Studio 4.2 inch B/W display.
+/// Display driver for the WeAct Studio 1.54 inch B/W display.
 pub type WeActStudio154BlackWhiteDriver<DI, BSY, RST, DELAY> =
 DisplayDriver<DI, BSY, RST, DELAY, 200, 200, 200, Color>;
 
@@ -117,8 +117,7 @@ where
             &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
         )
         .await?;
-        self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])
-            .await?;
+        // self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80]).await?;
         self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])
             .await?;
         self.use_full_frame().await?;
