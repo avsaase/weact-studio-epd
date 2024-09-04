@@ -20,6 +20,9 @@ use crate::{
     command, flag, lut, Color, Result, TriColor,
 };
 
+/// Display driver for the WeAct Studio 4.2 inch B/W display.
+pub type WeActStudio420BlackWhiteDriver<DI, BSY, RST, DELAY> =
+    DisplayDriver<DI, BSY, RST, DELAY, 400, 400, 300, Color>;
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 128, 296, Color>;
@@ -32,6 +35,9 @@ pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, TriColor>;
+/// Display driver for the WeAct Studio 1.54 inch B/W display.
+pub type WeActStudio154BlackWhiteDriver<DI, BSY, RST, DELAY> =
+DisplayDriver<DI, BSY, RST, DELAY, 200, 200, 200, Color>;
 
 /// The main driver struct that manages the communication with the display.
 ///
@@ -111,8 +117,7 @@ where
             &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
         )
         .await?;
-        self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])
-            .await?;
+        // self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80]).await?;
         self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])
             .await?;
         self.use_full_frame().await?;
@@ -217,6 +222,24 @@ where
             .await?;
         self.command(command::MASTER_ACTIVATE).await?;
         self.wait_until_idle().await;
+        Ok(())
+    }
+
+    /// Put the device into deep-sleep mode.
+    /// You will need to call wakeup() before you can draw to the screen again.
+    pub async fn sleep(&mut self) -> Result<()> {
+        // We can't use send_with_data, because the data function will also wait_until_idle,
+        // but after sending the deep sleep command, busy will not be cleared,
+        // maybe as a feature to signal the device won't be able to process further instuctions until woken again.
+        self.interface.send_commands(DataFormat::U8(&[command::DEEP_SLEEP])).await?;
+        self.interface.send_data(DataFormat::U8(&[flag::DEEP_SLEEP_MODE_1])).await?;
+        Ok(())
+    }
+
+    /// Wake the device up from deep-sleep mode.
+    pub async fn wake_up(&mut self) -> Result<()> {
+        // HW reset seems to be enough in deep sleep mode 1, no need to call init again
+        self.hw_reset().await;
         Ok(())
     }
 

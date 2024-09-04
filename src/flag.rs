@@ -1,5 +1,8 @@
 #[allow(unused)]
 mod flags {
+    pub const DEEP_SLEEP_NORMAL_MODE: u8 = 0b00; // Also called Power on Reset [POR]
+    pub const DEEP_SLEEP_MODE_1: u8 = 0b01; // RAM is retained (but not accessible)
+    pub const DEEP_SLEEP_MODE_2: u8 = 0b11; // RAM is not retained
     pub const DATA_ENTRY_INCRY_INCRX: u8 = 0b11;
     pub const INTERNAL_TEMP_SENSOR: u8 = 0x80;
     pub const BORDER_WAVEFORM_FOLLOW_LUT: u8 = 0b0100;
