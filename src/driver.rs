@@ -35,6 +35,9 @@ pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, TriColor>;
+/// Display driver for the WeAct Studio 4.2 inch B/W display.
+pub type WeActStudio154BlackWhiteDriver<DI, BSY, RST, DELAY> =
+DisplayDriver<DI, BSY, RST, DELAY, 200, 200, 200, Color>;
 
 /// The main driver struct that manages the communication with the display.
 ///

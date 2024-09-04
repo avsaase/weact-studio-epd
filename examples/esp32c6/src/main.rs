@@ -22,10 +22,10 @@ use esp_hal::{
 };
 use heapless::String;
 use profont::PROFONT_24_POINT;
-use weact_studio_epd::{graphics::Display420BlackWhite, Color};
+use weact_studio_epd::{graphics::Display154BlackWhite, Color};
 use weact_studio_epd::{
     graphics::DisplayRotation,
-    WeActStudio420BlackWhiteDriver,
+    WeActStudio154BlackWhiteDriver,
 };
 
 #[entry]
@@ -72,9 +72,9 @@ fn main() -> ! {
 
     // Setup EPD
     log::info!("Intializing EPD...");
-    let mut driver = WeActStudio420BlackWhiteDriver::new(spi_interface, busy, rst, delay);
-    let mut display = Display420BlackWhite::new();
-    display.set_rotation(DisplayRotation::Rotate0);
+    let mut driver = WeActStudio154BlackWhiteDriver::new(spi_interface, busy, rst, delay);
+    let mut display = Display154BlackWhite::new();
+    display.set_rotation(DisplayRotation::Rotate90);
     driver.init().unwrap();
 
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
