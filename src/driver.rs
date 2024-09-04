@@ -20,6 +20,9 @@ use crate::{
     command, flag, lut, Color, Result, TriColor,
 };
 
+/// Display driver for the WeAct Studio 4.2 inch B/W display.
+pub type WeActStudio420BlackWhiteDriver<DI, BSY, RST, DELAY> =
+    DisplayDriver<DI, BSY, RST, DELAY, 400, 400, 300, Color>;
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 128, 296, Color>;

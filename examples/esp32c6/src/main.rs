@@ -22,10 +22,10 @@ use esp_hal::{
 };
 use heapless::String;
 use profont::PROFONT_24_POINT;
-use weact_studio_epd::{graphics::Display290BlackWhite, Color};
+use weact_studio_epd::{graphics::Display420BlackWhite, Color};
 use weact_studio_epd::{
     graphics::DisplayRotation,
-    WeActStudio290BlackWhiteDriver,
+    WeActStudio420BlackWhiteDriver,
 };
 
 #[entry]
@@ -40,13 +40,12 @@ fn main() -> ! {
 
     log::info!("Intializing SPI Bus...");
 
-    // Pins for Seeedstudio XIAO ESP32-C6
-    let sclk = io.pins.gpio19; // D8 / GPIO19
-    let mosi = io.pins.gpio18; // D10 / GPIO18
-    let cs = io.pins.gpio20; // D9 / GPIO20
-    let dc = io.pins.gpio21; // D3 / GPIO21
-    let rst = io.pins.gpio22; // D4 / GPIO22
-    let busy = io.pins.gpio23; // D5 / GPIO23
+    let sclk = io.pins.gpio6;
+    let mosi = io.pins.gpio7;
+    let cs = io.pins.gpio15;
+    let dc = io.pins.gpio21;
+    let rst = io.pins.gpio22;
+    let busy = io.pins.gpio23;
 
     let spi_bus = Spi::new(peripherals.SPI2, 100.kHz(), SpiMode::Mode0, &clocks).with_pins(
         Some(sclk),
@@ -73,9 +72,9 @@ fn main() -> ! {
 
     // Setup EPD
     log::info!("Intializing EPD...");
-    let mut driver = WeActStudio290BlackWhiteDriver::new(spi_interface, busy, rst, delay);
-    let mut display = Display290BlackWhite::new();
-    display.set_rotation(DisplayRotation::Rotate90);
+    let mut driver = WeActStudio420BlackWhiteDriver::new(spi_interface, busy, rst, delay);
+    let mut display = Display420BlackWhite::new();
+    display.set_rotation(DisplayRotation::Rotate0);
     driver.init().unwrap();
 
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
