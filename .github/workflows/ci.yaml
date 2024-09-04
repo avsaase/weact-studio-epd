@@ -54,7 +54,8 @@ jobs:
       matrix:
         example: [
           { folder: rp2040, target: thumbv6m-none-eabi }, 
-          { folder: stm32g431, target: thumbv7em-none-eabi }
+          { folder: stm32g431, target: thumbv7em-none-eabi },
+          { folder: esp32c6, target: riscv32imac-unknown-none-elf },
         ]
     steps:
       - uses: actions/checkout@v4
