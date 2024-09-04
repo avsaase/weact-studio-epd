@@ -6,7 +6,7 @@ use display_interface_spi::SPIInterface;
 use embedded_graphics::{
     geometry::Point,
     mono_font::MonoTextStyle,
-    text::{Text, TextStyle},
+    text::{Text, TextStyle, Alignment, TextStyleBuilder},
     Drawable,
 };
 use embedded_hal_bus::spi::ExclusiveDevice;
@@ -22,7 +22,7 @@ use esp_hal::{
 };
 use heapless::String;
 use profont::PROFONT_24_POINT;
-use weact_studio_epd::{graphics::Display420BlackWhite, Color};
+use weact_studio_epd::{graphics::{Display420BlackWhite, DisplayBlackWhite, buffer_len}, Color};
 use weact_studio_epd::{
     graphics::DisplayRotation,
     WeActStudio420BlackWhiteDriver,
@@ -77,6 +77,10 @@ fn main() -> ! {
     display.set_rotation(DisplayRotation::Rotate0);
     driver.init().unwrap();
 
+    let mut partial_display =
+    DisplayBlackWhite::<64, 128, { buffer_len::<Color>(64, 128) }>::new();
+    partial_display.set_rotation(DisplayRotation::Rotate0);
+
     let style = MonoTextStyle::new(&PROFONT_24_POINT, Color::Black);
     let _ = Text::with_text_style(
         "Hello World!",
@@ -95,19 +99,17 @@ fn main() -> ! {
     let mut n:u8 = 0;
     loop {
         log::info!("Wake up!");
-        driver.wake_up().unwrap();
-
-        display.clear(Color::White);
+        partial_display.clear(Color::White);
 
         let mut string_buf = String::<30>::new();
-        write!(string_buf, "Hello World {}!", n).unwrap();
-        let _ = Text::with_text_style(&string_buf, Point::new(8, 68), style, TextStyle::default())
-            .draw(&mut display)
+        write!(string_buf, "Update {}!", n).unwrap();
+        let _ = Text::with_text_style(&string_buf, Point::new(128, 32), style, TextStyleBuilder::new().alignment(Alignment::Right).build())
+            .draw(&mut partial_display)
             .unwrap();
         string_buf.clear();
 
-        // TODO: try fast update?
-        driver.full_update(&display).unwrap();
+        driver.wake_up().unwrap();
+        driver.fast_partial_update(&partial_display, 56, 156).unwrap();
 
         n = n.wrapping_add(1); // Wrap from 0..255
 
