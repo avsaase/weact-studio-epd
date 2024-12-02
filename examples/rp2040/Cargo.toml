@@ -37,3 +37,6 @@ heapless = "0.8.0"
 profont = "0.7.0"
 
 weact-studio-epd = { path = "../.." }
+
+[profile.release]
+debug = 2

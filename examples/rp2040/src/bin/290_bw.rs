@@ -30,7 +30,7 @@ use weact_studio_epd::{
 async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
 
-    let busy = Input::new(p.PIN_16, Pull::Up);
+    let busy = Input::new(p.PIN_17, Pull::Up);
     let res = Output::new(p.PIN_20, Level::Low);
     let dc = Output::new(p.PIN_21, Level::Low);
     let cs = Output::new(p.PIN_22, Level::High);
@@ -68,8 +68,20 @@ async fn main(_spawner: Spawner) {
 
     let text_style = TextStyleBuilder::new().alignment(Alignment::Right).build();
     loop {
+        display.clear(Color::White);
+
         let elapsed = now.elapsed();
         now = Instant::now();
+
+        let _ = Text::with_text_style(
+            "Time:\nInterval:",
+            Point::new(8, 40),
+            style,
+            TextStyle::default(),
+        )
+        .draw(&mut display)
+        .unwrap();
+
         let _ = write!(
             string_buf,
             "{:8.0}ms\n{}ms",
@@ -77,15 +89,17 @@ async fn main(_spawner: Spawner) {
             elapsed.as_millis()
         );
 
-        let _ = Text::with_text_style(&string_buf, Point::new(128, 32), style, text_style)
-            .draw(&mut partial_display_bw);
+        let _ = Text::with_text_style(
+            &string_buf,
+            Point::new(128 + 156, 32 + 56),
+            style,
+            text_style,
+        )
+        .draw(&mut display);
         string_buf.clear();
 
-        driver
-            .fast_partial_update(&partial_display_bw, 56, 156)
-            .await
-            .unwrap();
+        driver.fast_update(&display).await.unwrap();
 
-        partial_display_bw.clear(Color::White);
+        // display.clear(Color::White);
     }
 }
