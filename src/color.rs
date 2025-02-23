@@ -137,7 +137,7 @@ impl From<TriColor> for Rgb888 {
 
 /// Conversion from RGB888 to use `Color` with `embedded-graphics-simulator`.
 ///
-/// Panics if the RGB value is not black or white.
+/// Panics if the RGB value is not black, white or red.
 #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
 #[cfg(feature = "graphics")]
 impl From<Rgb888> for TriColor {
