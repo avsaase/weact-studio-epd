@@ -122,6 +122,35 @@ pub enum TriColor {
     Red,
 }
 
+/// Conversion to RGB888 to use `TriColor` with `embedded-graphics-simulator`.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<TriColor> for Rgb888 {
+    fn from(val: TriColor) -> Self {
+        match val {
+            TriColor::White => Rgb888::WHITE,
+            TriColor::Black => Rgb888::BLACK,
+            TriColor::Red => Rgb888::RED,
+        }
+    }
+}
+
+/// Conversion from RGB888 to use `Color` with `embedded-graphics-simulator`.
+///
+/// Panics if the RGB value is not black or white.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<Rgb888> for TriColor {
+    fn from(value: Rgb888) -> Self {
+        match value {
+            Rgb888::BLACK => TriColor::Black,
+            Rgb888::WHITE => TriColor::White,
+            Rgb888::RED => TriColor::Red,
+            _ => panic!("RGB value must be black, white, or red"),
+        }
+    }
+}
+
 /// Color trait for use in `Display`s.
 #[sealed]
 pub trait ColorType {
