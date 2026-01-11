@@ -12,68 +12,76 @@ use embedded_graphics::{
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_backtrace as _;
 use esp_hal::{
-    clock::ClockControl,
     delay::Delay,
-    gpio::{Input, Io, Level, Output, NO_PIN},
+    esp_riscv_rt::entry,
+    gpio::{Input, InputConfig, Level, Output, OutputConfig, Pull},
     peripherals::Peripherals,
-    prelude::*,
-    spi::{master::Spi, SpiMode},
-    system::SystemControl,
+    spi::{self, master::Spi},
+    time::Rate,
 };
+use log::{error, info};
+
 use heapless::String;
 use profont::PROFONT_24_POINT;
 use weact_studio_epd::{graphics::Display290BlackWhite, Color};
-use weact_studio_epd::{
-    graphics::DisplayRotation,
-    WeActStudio290BlackWhiteDriver,
-};
+use weact_studio_epd::{graphics::DisplayRotation, WeActStudio290BlackWhiteDriver};
+
+esp_bootloader_esp_idf::esp_app_desc!();
 
 #[entry]
 fn main() -> ! {
-    let peripherals = Peripherals::take();
-    let system = SystemControl::new(peripherals.SYSTEM);
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-    let clocks = ClockControl::max(system.clock_control).freeze();
-    let delay = Delay::new(&clocks);
-
     esp_println::logger::init_logger_from_env();
 
-    log::info!("Intializing SPI Bus...");
+    let config = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::max());
+    let peripherals: Peripherals = esp_hal::init(config);
 
-    // Pins for Seeedstudio XIAO ESP32-C6
-    let sclk = io.pins.gpio19; // D8 / GPIO19
-    let mosi = io.pins.gpio18; // D10 / GPIO18
-    let cs = io.pins.gpio20; // D9 / GPIO20
-    let dc = io.pins.gpio21; // D3 / GPIO21
-    let rst = io.pins.gpio22; // D4 / GPIO22
-    let busy = io.pins.gpio23; // D5 / GPIO23
+    // esp32 gpio pins
+    let sclk_pin = peripherals.GPIO19;
+    let mosi_pin = peripherals.GPIO18;
+    let cs_pin = peripherals.GPIO20;
+    let dc_pin = peripherals.GPIO21;
+    let rst_pin = peripherals.GPIO22;
+    let busy_pin = peripherals.GPIO23;
 
-    let spi_bus = Spi::new(peripherals.SPI2, 100.kHz(), SpiMode::Mode0, &clocks).with_pins(
-        Some(sclk),
-        Some(mosi),
-        NO_PIN,
-        NO_PIN, // cs is handled by the exclusive device
-    );
+    // Create pin drivers for bare pins
+    // /*
+    //     CS: OutputPin,
+    //     BUSY: InputPin,
+    //     DC: OutputPin,
+    //     RST: OutputPin,
+    // */
+    let cs = Output::new(cs_pin, Level::High, OutputConfig::default());
+    let busy = Input::new(busy_pin, InputConfig::default().with_pull(Pull::Up));
+    let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
+    let rst = Output::new(rst_pin, Level::High, OutputConfig::default());
+    let delay = Delay::new();
 
-    // Convert pins into InputPins and OutputPins
-    /*
-        CS: OutputPin,
-        BUSY: InputPin,
-        DC: OutputPin,
-        RST: OutputPin,
-    */
-    let cs = Output::new(cs, Level::High);
-    let busy = Input::new(busy, esp_hal::gpio::Pull::Up);
-    let dc = Output::new(dc, Level::Low);
-    let rst = Output::new(rst, Level::High);
+    let spi_bus = {
+        info!("Intializing SPI Bus...");
 
-    log::info!("Intializing SPI Device...");
-    let spi_device = ExclusiveDevice::new(spi_bus, cs, delay).expect("SPI device initialize error");
+        let config = spi::master::Config::default()
+            .with_frequency(Rate::from_khz(100))
+            .with_mode(spi::Mode::_0);
+
+        Spi::new(peripherals.SPI2, config)
+            .inspect_err(|e| {
+                error!("Error while creating SPI: {e}");
+            })
+            .unwrap()
+            .with_sck(sclk_pin)
+            .with_mosi(mosi_pin)
+    };
+
+    info!("Intializing SPI Device...");
+    let spi_device = ExclusiveDevice::new(spi_bus, cs, delay.clone())
+        .inspect_err(|e| error!("Error creating exclusive spi device: {e}"))
+        .unwrap();
+
     let spi_interface = SPIInterface::new(spi_device, dc);
 
     // Setup EPD
     log::info!("Intializing EPD...");
-    let mut driver = WeActStudio290BlackWhiteDriver::new(spi_interface, busy, rst, delay);
+    let mut driver = WeActStudio290BlackWhiteDriver::new(spi_interface, busy, rst, delay.clone());
     let mut display = Display290BlackWhite::new();
     display.set_rotation(DisplayRotation::Rotate90);
     driver.init().unwrap();
@@ -91,9 +99,10 @@ fn main() -> ! {
 
     log::info!("Sleeping for 5s...");
     driver.sleep().unwrap();
-    delay.delay(5_000.millis());
 
-    let mut n:u8 = 0;
+    delay.delay_millis(5_000);
+
+    let mut n: u8 = 0;
     loop {
         log::info!("Wake up!");
         driver.wake_up().unwrap();
@@ -114,6 +123,6 @@ fn main() -> ! {
 
         log::info!("Sleeping for 5s...");
         driver.sleep().unwrap();
-        delay.delay(5_000.millis());
+        delay.delay_millis(5_000);
     }
 }
