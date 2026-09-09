@@ -10,12 +10,14 @@ mod flags {
     pub const BORDER_WAVEFORM_LUT1: u8 = 0b01;
     pub const BORDER_WAVEFORM_LUT2: u8 = 0b10;
     pub const BORDER_WAVEFORM_LUT3: u8 = 0b11;
-    pub const DISPLAY_MODE_1: u8 = 0xF7;
-    pub const DISPLAY_MODE_2: u8 = 0xFF;
+    pub const DISPLAY_MODE_FULL_REFRESH: u8 = 0xF7;
+    pub const DISPLAY_MODE_FULL_REFRESH_VARIANT: u8 = 0xF4; // Full refresh mode of the 1.54" B/W display
+    pub const DISPLAY_MODE_FAST_REFRESH: u8 = 0xFF;
+    pub const DISPLAY_MODE_FAST_REFRESH_VARIANT: u8 = 0xFC; // Partial refresh mode of the 1.54" B/W display
     /// Undocumented value for the "Display Update Control 2 (`0x22`) command.
     /// Together with the [`crate::lut::LUT_PARTIAL_UPDATE`] lut this yields much better looking
     /// quick refreshes.
-    pub const UNDOCUMENTED: u8 = 0xCC;
+    pub const DISPLAY_MODE_FAST_REFRESH_LUT: u8 = 0xCC;
 }
 
 pub(crate) use flags::*;

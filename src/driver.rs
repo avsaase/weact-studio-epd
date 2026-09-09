@@ -20,6 +20,9 @@ use crate::{
     command, flag, lut, Color, Result, TriColor,
 };
 
+/// Display driver for the WeAct Studio 4.2 inch B/W display.
+pub type WeActStudio420BlackWhiteDriver<DI, BSY, RST, DELAY> =
+    DisplayDriver<DI, BSY, RST, DELAY, 400, 400, 300, Color>;
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
 pub type WeActStudio290BlackWhiteDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 128, 296, Color>;
@@ -32,6 +35,9 @@ pub type WeActStudio213BlackWhiteDriver<DI, BSY, RST, DELAY> =
 /// Display driver for the WeAct Studio 2.13 inch Tri-Color display.
 pub type WeActStudio213TriColorDriver<DI, BSY, RST, DELAY> =
     DisplayDriver<DI, BSY, RST, DELAY, 128, 122, 250, TriColor>;
+/// Display driver for the WeAct Studio 1.54 inch B/W display.
+pub type WeActStudio154BlackWhiteDriver<DI, BSY, RST, DELAY> =
+    DisplayDriver<DI, BSY, RST, DELAY, 200, 200, 200, Color>;
 
 /// The main driver struct that manages the communication with the display.
 ///
@@ -99,22 +105,49 @@ where
         self.command(command::SW_RESET).await?;
         self.delay.delay_ms(10).await;
         self.wait_until_idle().await;
+
         self.command_with_data(
             command::DRIVER_CONTROL,
             &[(HEIGHT - 1) as u8, ((HEIGHT - 1) >> 8) as u8, 0x00],
         )
         .await?;
+
         self.command_with_data(command::DATA_ENTRY_MODE, &[flag::DATA_ENTRY_INCRY_INCRX])
             .await?;
-        self.command_with_data(
-            command::BORDER_WAVEFORM_CONTROL,
-            &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
-        )
-        .await?;
-        self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])
+
+        // 4.2" display
+        if WIDTH == 400 && HEIGHT == 300 {
+            self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x40, 0x00])
+                .await?;
+            self.command_with_data(
+                command::BORDER_WAVEFORM_CONTROL,
+                &[flag::BORDER_WAVEFORM_LUT1],
+            )
             .await?;
+        }
+        // 1.54" display
+        else if WIDTH == 200 && HEIGHT == 200 {
+             // command::DISPLAY_UPDATE_CONTROL is not used
+             self.command_with_data(
+                command::BORDER_WAVEFORM_CONTROL,
+                &[flag::BORDER_WAVEFORM_LUT1],
+            )
+            .await?;
+        } 
+        // 2.9" and 2.13" displays
+        else {
+            self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x80])
+                .await?;
+            self.command_with_data(
+                command::BORDER_WAVEFORM_CONTROL,
+                &[flag::BORDER_WAVEFORM_FOLLOW_LUT | flag::BORDER_WAVEFORM_LUT1],
+            )
+            .await?;
+        }
+
         self.command_with_data(command::TEMP_CONTROL, &[flag::INTERNAL_TEMP_SENSOR])
             .await?;
+
         self.use_full_frame().await?;
         self.wait_until_idle().await;
         Ok(())
@@ -213,8 +246,17 @@ where
         self.initial_full_refresh_done = true;
         self.using_partial_mode = false;
 
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])
+        // 1.54" display
+        if WIDTH == 200 && HEIGHT == 200 {
+            self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_FULL_REFRESH_VARIANT])
             .await?;
+        }
+        // 4.2", 2.9" and 2.13" displays
+        else {
+            self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_FULL_REFRESH])
+            .await?;
+        }
+
         self.command(command::MASTER_ACTIVATE).await?;
         self.wait_until_idle().await;
         Ok(())
@@ -370,12 +412,46 @@ where
         }
 
         if !self.using_partial_mode {
-            self.command_with_data(command::WRITE_LUT, &lut::LUT_PARTIAL_UPDATE)
+            // 4.2" display
+            if WIDTH == 400 && HEIGHT == 300 {
+                self.command_with_data(
+                    command::BORDER_WAVEFORM_CONTROL,
+                    &[0x80],
+                )
                 .await?;
+    
+                self.command_with_data(command::DISPLAY_UPDATE_CONTROL, &[0x00, 0x00])
+                .await?;
+            } 
+            // 1.54" display
+            else if WIDTH == 200 && HEIGHT == 200 {
+                // Nothing to do here
+            } 
+            // 2.9" and 2.13" displays
+            else {
+                self.command_with_data(command::WRITE_LUT, &lut::LUT_PARTIAL_UPDATE)
+                .await?;
+            }
+
             self.using_partial_mode = true;
         }
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::UNDOCUMENTED])
-            .await?;
+        
+        // 4.2" display
+        if WIDTH == 400 && HEIGHT == 300 {
+            self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_FAST_REFRESH])
+                .await?;
+        } 
+        // 1.54" display
+        else if WIDTH == 200 && HEIGHT == 200 {
+            self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_FAST_REFRESH_VARIANT])
+                .await?;
+        }
+        // 2.9" and 2.13" displays
+        else {
+            self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_FAST_REFRESH_LUT])
+                .await?;
+        }
+
         self.command(command::MASTER_ACTIVATE).await?;
         self.wait_until_idle().await;
         Ok(())
@@ -414,10 +490,6 @@ where
         self.write_partial_bw_buffer(buffer, x, y, width, height)
             .await?;
         self.fast_refresh().await?;
-        self.write_partial_red_buffer(buffer, x, y, width, height)
-            .await?;
-        self.write_partial_bw_buffer(buffer, x, y, width, height)
-            .await?;
         Ok(())
     }
 

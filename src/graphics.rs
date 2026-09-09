@@ -41,6 +41,8 @@ pub struct Display<const WIDTH: u32, const HEIGHT: u32, const BUFFER_SIZE: usize
     _color: core::marker::PhantomData<C>,
 }
 
+/// Display buffer for the WeAct Studio 4.2 inch B/W display.
+pub type Display420BlackWhite = Display<400, 300, { buffer_len::<Color>(400, 300) }, Color>;
 /// Display buffer for the WeAct Studio 2.9 inch B/W display.
 pub type Display290BlackWhite = Display<128, 296, { buffer_len::<Color>(128, 296) }, Color>;
 /// Display buffer for the WeAct Studio 2.9 inch tri-color display.
@@ -53,6 +55,8 @@ pub type Display213BlackWhite = Display<128, 250, { buffer_len::<Color>(128, 250
 ///
 /// The screen uses a 128 pixel wide buffer but only 122 pixels are visible.
 pub type Display213TriColor = Display<128, 250, { buffer_len::<TriColor>(128, 250) }, TriColor>;
+/// Display buffer for the WeAct Studio 1.54 inch B/W display.
+pub type Display154BlackWhite = Display<200, 200, { buffer_len::<Color>(200, 200) }, Color>;
 
 /// Generically-sized B/W display buffer.
 ///
