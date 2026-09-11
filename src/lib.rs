@@ -12,7 +12,6 @@ mod flag;
 #[cfg(feature = "graphics")]
 /// `embedded-graphics` support.
 pub mod graphics;
-mod lut;
 
 pub use color::{Color, TriColor};
 pub use driver::*;

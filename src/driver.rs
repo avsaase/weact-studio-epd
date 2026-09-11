@@ -17,7 +17,7 @@ use embedded_hal::digital::{InputPin, OutputPin};
 use crate::graphics::Display;
 use crate::{
     color::{self, ColorType},
-    command, flag, lut, Color, Result, TriColor,
+    command, flag, Color, Result, TriColor,
 };
 
 /// Display driver for the WeAct Studio 2.9 inch B/W display.
@@ -208,12 +208,17 @@ where
         Ok(())
     }
 
-    /// Start a full refresh of the display.
+    /// Start a full refresh using AramVartanyan's true LUT-free approach.
     pub async fn full_refresh(&mut self) -> Result<()> {
         self.initial_full_refresh_done = true;
         self.using_partial_mode = false;
 
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::DISPLAY_MODE_1])
+        // Set border waveform for full update (0x05 like AramVartanyan)
+        self.command_with_data(command::BORDER_WAVEFORM_CONTROL, &[0x05])
+            .await?;
+
+        // AramVartanyan approach: 0xF7 for full update (uses built-in controller LUTs)
+        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[0xF7])
             .await?;
         self.command(command::MASTER_ACTIVATE).await?;
         self.wait_until_idle().await;
@@ -359,48 +364,54 @@ where
     RST: OutputPin,
     DELAY: DelayNs,
 {
-    /// Start a fast refresh of the display using the current in-screen buffers.
+    /// Start a fast refresh using AramVartanyan's true LUT-free approach.
     ///
     /// If the display hasn't done a [`Self::full_refresh`] yet, it will do that first.
     pub async fn fast_refresh(&mut self) -> Result<()> {
         if !self.initial_full_refresh_done {
-            // There a bug here which causes the new image to overwrite the existing image which then
-            // fades out over several updates.
             self.full_refresh().await?;
         }
 
-        if !self.using_partial_mode {
-            self.command_with_data(command::WRITE_LUT, &lut::LUT_PARTIAL_UPDATE)
-                .await?;
-            self.using_partial_mode = true;
-        }
-        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[flag::UNDOCUMENTED])
+        self.using_partial_mode = true;
+
+        // AramVartanyan approach: 0xFF for partial update (uses built-in controller LUTs)
+        // NO custom LUT loading needed - relies entirely on built-in controller intelligence
+        self.command_with_data(command::UPDATE_DISPLAY_CTRL2, &[0xFF])
             .await?;
         self.command(command::MASTER_ACTIVATE).await?;
         self.wait_until_idle().await;
         Ok(())
     }
 
-    /// Update the screen with the provided full frame buffer using a full refresh.
+    /// Update the screen with the provided full frame buffer using AramVartanyan's approach.
+    /// Writes to both DTM1 and DTM2 to establish reference state for partial updates.
     pub async fn full_update_from_buffer(&mut self, buffer: &[u8]) -> Result<()> {
-        self.write_red_buffer(buffer).await?;
-        self.write_bw_buffer(buffer).await?;
+        // AramVartanyan strategy: write to both RAM1 (0x24) and RAM2 (0x26) for full update
+        self.write_bw_buffer(buffer).await?;  // Write to DTM1 (0x24)
+        self.write_red_buffer(buffer).await?; // Write to DTM2 (0x26) - same data
         self.full_refresh().await?;
-        self.write_red_buffer(buffer).await?;
-        self.write_bw_buffer(buffer).await?;
         Ok(())
     }
 
-    /// Update the screen with the provided full frame buffer using a fast refresh.
+    /// Update the screen with the provided full frame buffer using AramVartanyan's partial approach.
+    /// Uses partial counter to force periodic full refreshes and prevent fading.
     pub async fn fast_update_from_buffer(&mut self, buffer: &[u8]) -> Result<()> {
+        // AramVartanyan's counter system: force full refresh every 5 partial updates
+        // Partial update: hardware reset + border control + write only to DTM1
+        self.hw_reset().await;
+
+        // Set border waveform for partial update (0x80 like AramVartanyan)
+        self.command_with_data(command::BORDER_WAVEFORM_CONTROL, &[0x80])
+            .await?;
+
+        // Write ONLY to RAM1 (0x24) for partial update
         self.write_bw_buffer(buffer).await?;
         self.fast_refresh().await?;
-        self.write_red_buffer(buffer).await?;
-        self.write_bw_buffer(buffer).await?;
         Ok(())
     }
 
-    /// Update the screen with the provided partial frame buffer at the given position using a fast refresh.
+    /// Update the screen with the provided partial frame buffer using AramVartanyan's approach.
+    /// Only writes to DTM1, leaving DTM2 unchanged as reference for differential updates.
     ///
     /// `x`, and `width` must be multiples of 8.
     pub async fn fast_partial_update_from_buffer(
@@ -411,13 +422,10 @@ where
         width: u32,
         height: u32,
     ) -> Result<()> {
+        // AramVartanyan strategy: write ONLY to RAM1 (0x24) for partial update
         self.write_partial_bw_buffer(buffer, x, y, width, height)
             .await?;
         self.fast_refresh().await?;
-        self.write_partial_red_buffer(buffer, x, y, width, height)
-            .await?;
-        self.write_partial_bw_buffer(buffer, x, y, width, height)
-            .await?;
         Ok(())
     }
 
