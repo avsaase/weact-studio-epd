@@ -69,7 +69,7 @@ impl From<Rgb565> for Color {
     }
 }
 
-/// Conversion to Rgb565 to use `Color` with tinybmp
+/// Conversion to Rgb565 to use `Color` with `tinybmp`.
 #[cfg(feature = "graphics")]
 impl From<Color> for Rgb565 {
     fn from(color: Color) -> Self {
@@ -80,7 +80,7 @@ impl From<Color> for Rgb565 {
     }
 }
 
-/// Conversion from Rgb555 to use `Color` with tinybmp
+/// Conversion from Rgb555 to use `Color` with `tinybmp`.
 #[cfg(feature = "graphics")]
 impl From<Rgb555> for Color {
     fn from(rgb: Rgb555) -> Self {
@@ -99,7 +99,7 @@ impl From<Rgb555> for Color {
     }
 }
 
-/// Conversion to Rgb555 to use `Color` with tinybmp
+/// Conversion to Rgb555 to use `Color` with `tinybmp`.
 #[cfg(feature = "graphics")]
 impl From<Color> for Rgb555 {
     fn from(color: Color) -> Self {
@@ -135,7 +135,7 @@ impl From<TriColor> for Rgb888 {
     }
 }
 
-/// Conversion from RGB888 to use `Color` with `embedded-graphics-simulator`.
+/// Conversion from RGB888 to use `TriColor` with `embedded-graphics-simulator`.
 ///
 /// Panics if the RGB value is not black, white or red.
 #[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
@@ -146,7 +146,65 @@ impl From<Rgb888> for TriColor {
             Rgb888::BLACK => TriColor::Black,
             Rgb888::WHITE => TriColor::White,
             Rgb888::RED => TriColor::Red,
-            _ => panic!("RGB value must be black, white, or red"),
+            _ => panic!("RGB value must be black, white or red"),
+        }
+    }
+}
+
+/// Conversion to RGB555 to use `TriColor` with `tinybmp`.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<TriColor> for Rgb555 {
+    fn from(val: TriColor) -> Self {
+        match val {
+            TriColor::White => Rgb555::WHITE,
+            TriColor::Black => Rgb555::BLACK,
+            TriColor::Red => Rgb555::RED,
+        }
+    }
+}
+
+/// Conversion from RGB555 to use `TriColor` with `tinybmp`.
+///
+/// Panics if the RGB value is not black, white or red.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<Rgb555> for TriColor {
+    fn from(value: Rgb555) -> Self {
+        match value {
+            Rgb555::BLACK => TriColor::Black,
+            Rgb555::WHITE => TriColor::White,
+            Rgb555::RED => TriColor::Red,
+            _ => panic!("RGB value must be black, white or red"),
+        }
+    }
+}
+
+/// Conversion to RGB565 to use `TriColor` with `tinybmp`.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<TriColor> for Rgb565 {
+    fn from(val: TriColor) -> Self {
+        match val {
+            TriColor::White => Rgb565::WHITE,
+            TriColor::Black => Rgb565::BLACK,
+            TriColor::Red => Rgb565::RED,
+        }
+    }
+}
+
+/// Conversion from RGB565 to use `Color` with `tinybmp`.
+///
+/// Panics if the RGB value is not black, white or red.
+#[cfg_attr(docsrs, doc(cfg(feature = "graphics")))]
+#[cfg(feature = "graphics")]
+impl From<Rgb565> for TriColor {
+    fn from(value: Rgb565) -> Self {
+        match value {
+            Rgb565::BLACK => TriColor::Black,
+            Rgb565::WHITE => TriColor::White,
+            Rgb565::RED => TriColor::Red,
+            _ => panic!("RGB value must be black, white or red"),
         }
     }
 }
